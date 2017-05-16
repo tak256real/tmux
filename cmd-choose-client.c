@@ -24,40 +24,48 @@
 #include "tmux.h"
 
 /*
- * Enter choice mode to choose a client.
+ * Enter client mode.
  */
 
+<<<<<<< HEAD
+=======
 #define CHOOSE_CLIENT_TEMPLATE					\
 	"#{client_name}: #{session_name} "			\
 	"[#{client_width}x#{client_height} #{client_termname}]"	\
 	"#{?client_utf8, (utf8),}#{?client_readonly, (ro),} "	\
 	"(last used #{t:client_activity})"
 
+>>>>>>> master
 static enum cmd_retval	cmd_choose_client_exec(struct cmd *,
 			    struct cmdq_item *);
-
-static void	cmd_choose_client_callback(struct window_choose_data *);
 
 const struct cmd_entry cmd_choose_client_entry = {
 	.name = "choose-client",
 	.alias = NULL,
 
-	.args = { "F:t:", 0, 1 },
-	.usage = CMD_TARGET_WINDOW_USAGE " [-F format] [template]",
+	.args = { "t:", 0, 1 },
+	.usage = CMD_TARGET_PANE_USAGE " [template]",
 
+<<<<<<< HEAD
+	.tflag = CMD_PANE,
+=======
 	.target = { 't', CMD_FIND_WINDOW, 0 },
+>>>>>>> master
 
 	.flags = 0,
 	.exec = cmd_choose_client_exec
 };
 
-struct cmd_choose_client_data {
-	struct client	*client;
-};
-
 static enum cmd_retval
 cmd_choose_client_exec(struct cmd *self, struct cmdq_item *item)
 {
+<<<<<<< HEAD
+	struct args		*args = self->args;
+	struct window_pane	*wp = item->state.tflag.wp;
+
+	if (server_client_how_many() != 0)
+		window_pane_set_mode(wp, &window_client_mode, args);
+=======
 	struct args			*args = self->args;
 	struct client			*c = cmd_find_client(item, NULL, 1);
 	struct client			*c1;
@@ -107,29 +115,7 @@ cmd_choose_client_exec(struct cmd *self, struct cmdq_item *item)
 
 	window_choose_ready(wl->window->active, cur,
 	    cmd_choose_client_callback);
+>>>>>>> master
 
 	return (CMD_RETURN_NORMAL);
-}
-
-static void
-cmd_choose_client_callback(struct window_choose_data *cdata)
-{
-	struct client  	*c;
-	u_int		 idx;
-
-	if (cdata == NULL)
-		return;
-	if (cdata->start_client->flags & CLIENT_DEAD)
-		return;
-
-	idx = 0;
-	TAILQ_FOREACH(c, &clients, entry) {
-		if (idx == cdata->idx)
-			break;
-		idx++;
-	}
-	if (c == NULL || c->session == NULL)
-		return;
-
-	window_choose_data_run(cdata);
 }

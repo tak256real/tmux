@@ -24,11 +24,8 @@
 #include "tmux.h"
 
 /*
- * Enter choice mode to choose a buffer.
+ * Enter buffer mode.
  */
-
-#define CHOOSE_BUFFER_TEMPLATE						\
-	"#{buffer_name}: #{buffer_size} bytes: #{buffer_sample}"
 
 static enum cmd_retval	cmd_choose_buffer_exec(struct cmd *,
 			    struct cmdq_item *);
@@ -37,10 +34,14 @@ const struct cmd_entry cmd_choose_buffer_entry = {
 	.name = "choose-buffer",
 	.alias = NULL,
 
-	.args = { "F:t:", 0, 1 },
-	.usage = CMD_TARGET_WINDOW_USAGE " [-F format] [template]",
+	.args = { "t:", 0, 1 },
+	.usage = CMD_TARGET_PANE_USAGE " [template]",
 
+<<<<<<< HEAD
+	.tflag = CMD_PANE,
+=======
 	.target = { 't', CMD_FIND_WINDOW, 0 },
+>>>>>>> master
 
 	.flags = 0,
 	.exec = cmd_choose_buffer_exec
@@ -49,6 +50,10 @@ const struct cmd_entry cmd_choose_buffer_entry = {
 static enum cmd_retval
 cmd_choose_buffer_exec(struct cmd *self, struct cmdq_item *item)
 {
+<<<<<<< HEAD
+	struct args		*args = self->args;
+	struct window_pane	*wp = item->state.tflag.wp;
+=======
 	struct args			*args = self->args;
 	struct client			*c = cmd_find_client(item, NULL, 1);
 	struct winlink			*wl = item->target.wl;
@@ -94,8 +99,10 @@ cmd_choose_buffer_exec(struct cmd *self, struct cmdq_item *item)
 		idx++;
 	}
 	free(action);
+>>>>>>> master
 
-	window_choose_ready(wl->window->active, 0, NULL);
+	if (paste_get_top(NULL) != NULL)
+		window_pane_set_mode(wp, &window_buffer_mode, args);
 
 	return (CMD_RETURN_NORMAL);
 }

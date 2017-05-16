@@ -61,6 +61,7 @@ dist_tmux_SOURCES = \
 	arguments.c \
 	attributes.c \
 	cfg.c \
+	choose-tree.c \
 	client.c \
 	cmd-attach-session.c \
 	cmd-bind-key.c \
@@ -169,7 +170,9 @@ dist_tmux_SOURCES = \
 	tty-term.c \
 	tty.c \
 	utf8.c \
+	window-buffer.c \
 	window-choose.c \
+	window-client.c \
 	window-clock.c \
 	window-copy.c \
 	window.c \

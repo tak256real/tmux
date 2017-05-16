@@ -47,6 +47,21 @@ static void	server_client_dispatch_command(struct client *, struct imsg *);
 static void	server_client_dispatch_identify(struct client *, struct imsg *);
 static void	server_client_dispatch_shell(struct client *);
 
+<<<<<<< HEAD
+/* Number of attached clients. */
+u_int
+server_client_how_many(void)
+{
+	struct client  	*c;
+	u_int		 n;
+
+	n = 0;
+	TAILQ_FOREACH(c, &clients, entry) {
+		if (c->session != NULL && (~c->flags & CLIENT_DETACHING))
+			n++;
+	}
+	return (n);
+=======
 /* Identify mode callback. */
 static void
 server_client_callback_identify(__unused int fd, __unused short events, void *data)
@@ -88,6 +103,7 @@ server_client_clear_identify(struct client *c, struct window_pane *wp)
 
 	c->tty.flags &= ~(TTY_FREEZE|TTY_NOCURSOR);
 	server_redraw_client(c);
+>>>>>>> master
 }
 
 /* Check if this client is inside this server. */
@@ -338,6 +354,20 @@ server_client_suspend(struct client *c)
 	proc_send(c->peer, MSG_SUSPEND, -1, NULL, 0);
 }
 
+/* Suspend a client. */
+void
+server_client_suspend(struct client *c)
+{
+	struct session	*s = c->session;
+
+	if (s == NULL || (c->flags & CLIENT_DETACHING))
+		return;
+
+	tty_stop_tty(&c->tty);
+	c->flags |= CLIENT_SUSPENDED;
+	proc_send(c->peer, MSG_SUSPEND, -1, NULL, 0);
+}
+
 /* Detach a client. */
 void
 server_client_detach(struct client *c, enum msgtype msgtype)
@@ -346,6 +376,7 @@ server_client_detach(struct client *c, enum msgtype msgtype)
 
 	if (s == NULL || (c->flags & CLIENT_DETACHING))
 		return;
+	c->flags |= CLIENT_DETACHING;
 
 	c->flags |= CLIENT_DETACHING;
 	notify_client("client-detached", c);
