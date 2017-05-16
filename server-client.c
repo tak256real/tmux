@@ -64,8 +64,7 @@ server_client_how_many(void)
 
 /* Identify mode callback. */
 static void
-server_client_callback_identify(__unused int fd, __unused short events,
-    void *data)
+server_client_callback_identify(__unused int fd, __unused short events, void *data)
 {
 	server_client_clear_identify(data, NULL);
 }
@@ -344,7 +343,7 @@ server_client_free(__unused int fd, __unused short events, void *arg)
 void
 server_client_suspend(struct client *c)
 {
-	struct session	*s = c->session;
+	struct session  *s = c->session;
 
 	if (s == NULL || (c->flags & CLIENT_DETACHING))
 		return;
@@ -362,7 +361,6 @@ server_client_detach(struct client *c, enum msgtype msgtype)
 
 	if (s == NULL || (c->flags & CLIENT_DETACHING))
 		return;
-	c->flags |= CLIENT_DETACHING;
 
 	c->flags |= CLIENT_DETACHING;
 	notify_client("client-detached", c);
