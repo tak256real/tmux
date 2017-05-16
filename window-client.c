@@ -43,6 +43,12 @@ const struct window_mode window_client_mode = {
 	.key = window_client_key,
 };
 
+enum window_client_order {
+	WINDOW_CLIENT_BY_TTY_NAME,
+	WINDOW_CLIENT_BY_CREATION_TIME,
+	WINDOW_CLIENT_BY_ACTIVITY_TIME,
+};
+
 struct window_client_data;
 struct window_client_item {
 	struct window_client_data	*data;
@@ -61,12 +67,6 @@ static int window_client_cmp(const struct window_client_item *,
 RB_GENERATE_STATIC(window_client_tree, window_client_item, entry,
     window_client_cmp);
 
-enum window_client_order {
-	WINDOW_CLIENT_BY_TTY_NAME,
-	WINDOW_CLIENT_BY_CREATION_TIME,
-	WINDOW_CLIENT_BY_ACTIVITY_TIME,
-};
-
 struct window_client_data {
 	char				*command;
 	struct screen			 screen;
@@ -79,14 +79,14 @@ struct window_client_data {
 	struct window_client_tree	 tree;
 	u_int				 number;
 
-	enum window_client_order         order;
+	enum window_client_order	 order;
 };
 
 static void	window_client_up(struct window_client_data *);
 static void	window_client_down(struct window_client_data *);
 static void	window_client_run_command(struct client *, const char *,
 		    const char *);
-static void	window_client_free_tree(struct window_client_data *);
+static void	window_client_free_tree(struct window_client_tree *);
 static void	window_client_build_tree(struct window_client_data *);
 static void	window_client_draw_screen(struct window_pane *);
 
@@ -96,7 +96,7 @@ window_client_cmp(const struct window_client_item *a,
 {
 	switch (a->data->order) {
 	case WINDOW_CLIENT_BY_TTY_NAME:
-		return (strcmp (a->c->ttyname, b->c->ttyname));
+		return (strcmp(a->c->ttyname, b->c->ttyname));
 	case WINDOW_CLIENT_BY_CREATION_TIME:
 		if (timercmp(&a->c->creation_time, &b->c->creation_time, >))
 			return (-1);
@@ -147,7 +147,7 @@ window_client_free(struct window_pane *wp)
 	if (data == NULL)
 		return;
 
-	window_client_free_tree(data);
+	window_client_free_tree(&data->tree);
 
 	screen_free(&data->screen);
 
@@ -288,11 +288,8 @@ window_client_key(struct window_pane *wp, struct client *c,
 			item->tagged = 1;
 		break;
 	case 'O':
-		if (data->order == WINDOW_CLIENT_BY_TTY_NAME)
-			data->order = WINDOW_CLIENT_BY_CREATION_TIME;
-		else if (data->order == WINDOW_CLIENT_BY_CREATION_TIME)
-			data->order = WINDOW_CLIENT_BY_ACTIVITY_TIME;
-		else if (data->order == WINDOW_CLIENT_BY_ACTIVITY_TIME)
+		data->order++;
+		if (data->order > WINDOW_CLIENT_BY_ACTIVITY_TIME)
 			data->order = WINDOW_CLIENT_BY_TTY_NAME;
 		window_client_build_tree(data);
 		break;
@@ -369,14 +366,14 @@ window_client_run_command(struct client *c, const char *template,
 }
 
 static void
-window_client_free_tree(struct window_client_data *data)
+window_client_free_tree(struct window_client_tree *tree)
 {
 	struct window_client_item	*item, *item1;
 
-	RB_FOREACH_SAFE(item, window_client_tree, &data->tree, item1) {
+	RB_FOREACH_SAFE(item, window_client_tree, tree, item1) {
 		server_client_unref(item->c);
 
-		RB_REMOVE(window_client_tree, &data->tree, item);
+		RB_REMOVE(window_client_tree, tree, item);
 		free(item);
 	}
 }
@@ -384,11 +381,9 @@ window_client_free_tree(struct window_client_data *data)
 static void
 window_client_build_tree(struct window_client_data *data)
 {
-	struct screen			*s = &data->screen;
 	struct client			*c;
-	struct window_client_item	*item;
+	struct window_client_item	*item, *current;
 	char				*name;
-	struct window_client_item	*current;
 
 	if (data->current != NULL)
 		name = xstrdup(data->current->c->ttyname);
@@ -396,7 +391,7 @@ window_client_build_tree(struct window_client_data *data)
 		name = NULL;
 	current = NULL;
 
-	window_client_free_tree(data);
+	window_client_free_tree(&data->tree);
 
 	TAILQ_FOREACH(c, &clients, entry) {
 		if (c->session == NULL || (c->flags & CLIENT_DETACHING))
@@ -426,14 +421,14 @@ window_client_build_tree(struct window_client_data *data)
 		data->current = RB_MIN(window_client_tree, &data->tree);
 	free(name);
 
-	data->width = screen_size_x(s);
-	data->height = (screen_size_y(s) / 3) * 2;
+	data->width = screen_size_x(&data->screen);
+	data->height = (screen_size_y(&data->screen) / 3) * 2;
 	if (data->height > data->number)
-		data->height = screen_size_y(s) / 2;
+		data->height = screen_size_y(&data->screen) / 2;
 	if (data->height < 10)
-		data->height = screen_size_y(s);
-	if (screen_size_y(s) - data->height < 2)
-		data->height = screen_size_y(s);
+		data->height = screen_size_y(&data->screen);
+	if (screen_size_y(&data->screen) - data->height < 2)
+		data->height = screen_size_y(&data->screen);
 
 	if (data->current == NULL)
 		return;
@@ -452,107 +447,6 @@ window_client_build_tree(struct window_client_data *data)
 	}
 }
 
-static struct screen *
-window_client_draw_box(struct window_pane *wp, u_int *x, u_int *y)
-{
-	struct window_client_data	*data = wp->modedata;
-	struct client			*c = data->current->c;
-	static struct screen		 s;
-	struct screen_write_ctx	 	 ctx;
-	struct grid_cell		 gc0;
-	struct grid_cell		 gc;
-	u_int				 width, height, limit;
-	char				*tim;
-
-	width = *x = data->width - 4;
-	height = *y = screen_size_y(&data->screen) - data->height - 2;
-
-	if (width < 80)
-		width = 80;
-	if (height < 24)
-		height = 24;
-	limit = width - 16;
-
-	screen_init(&s, width, height, 0);
-	screen_write_start(&ctx, NULL, &s);
-	screen_write_clearscreen(&ctx, 8);
-
-	memcpy(&gc0, &grid_default_cell, sizeof gc0);
-	memcpy(&gc, &grid_default_cell, sizeof gc);
-	gc.attr |= GRID_ATTR_BRIGHT;
-
-	screen_write_cursormove(&ctx, 0, 0);
-	screen_write_puts(&ctx, &gc, "title");
-	screen_write_cursormove(&ctx, 16, 0);
-	if (c->title != NULL)
-		screen_write_nputs(&ctx, limit, &gc0, "\"%s\"", c->title);
-	else
-		screen_write_nputs(&ctx, limit, &gc0, "none");
-
-	screen_write_cursormove(&ctx, 0, 1);
-	screen_write_puts(&ctx, &gc, "size");
-	screen_write_cursormove(&ctx, 16, 1);
-	screen_write_nputs(&ctx, limit, &gc0, "%ux%u", c->tty.sx, c->tty.sy);
-
-	screen_write_cursormove(&ctx, 0, 2);
-	screen_write_puts(&ctx, &gc, "session");
-	screen_write_cursormove(&ctx, 16, 2);
-	screen_write_nputs(&ctx, limit, &gc0, "%s (@%u)", c->session->name,
-	    c->session->id);
-
-	screen_write_cursormove(&ctx, 0, 3);
-	screen_write_puts(&ctx, &gc, "created at");
-	tim = ctime(&c->creation_time.tv_sec);
-	*strchr(tim, '\n') = '\0';
-	screen_write_cursormove(&ctx, 16, 3);
-	screen_write_nputs(&ctx, limit, &gc0, "%s", tim);
-
-	screen_write_cursormove(&ctx, 0, 4);
-	screen_write_puts(&ctx, &gc, "activity at");
-	tim = ctime(&c->activity_time.tv_sec);
-	*strchr(tim, '\n') = '\0';
-	screen_write_cursormove(&ctx, 16, 4);
-	screen_write_nputs(&ctx, limit, &gc0, "%s", tim);
-
-	screen_write_cursormove(&ctx, 0, 5);
-	screen_write_puts(&ctx, &gc, "TERM");
-	screen_write_cursormove(&ctx, 16, 5);
-	screen_write_nputs(&ctx, limit, &gc0, "%s", c->tty.term_name);
-
-	screen_write_cursormove(&ctx, 0, 6);
-	screen_write_puts(&ctx, &gc, "UTF-8");
-	screen_write_cursormove(&ctx, 16, 6);
-	if (c->flags & CLIENT_UTF8)
-		screen_write_nputs(&ctx, limit, &gc0, "yes");
-	else
-		screen_write_nputs(&ctx, limit, &gc0, "no");
-
-	screen_write_cursormove(&ctx, 0, 7);
-	screen_write_puts(&ctx, &gc, "suspended");
-	screen_write_cursormove(&ctx, 16, 7);
-	if (c->flags & CLIENT_SUSPENDED)
-		screen_write_nputs(&ctx, limit, &gc0, "yes");
-	else
-		screen_write_nputs(&ctx, limit, &gc0, "no");
-
-	screen_write_cursormove(&ctx, 0, 8);
-	screen_write_puts(&ctx, &gc, "status line");
-	screen_write_cursormove(&ctx, 16, 8);
-	screen_write_copy(&ctx, &c->status, 0, 0, (*x) - 16, 1, NULL, NULL);
-
-	screen_write_cursormove(&ctx, 0, 9);
-	screen_write_puts(&ctx, &gc, "current pane");
-	screen_write_cursormove(&ctx, 16, 9);
-	if ((*x) > 16 && (*y) > 9) {
-		screen_write_preview(&ctx,
-		    &c->session->curw->window->active->base,
-		    (*x) - 16, (*y) - 9);
-	}
-
-	screen_write_stop(&ctx);
-	return (&s);
-}
-
 static void
 window_client_draw_screen(struct window_pane *wp)
 {
@@ -564,7 +458,7 @@ window_client_draw_screen(struct window_pane *wp)
 	struct screen_write_ctx	 	 ctx;
 	struct grid_cell		 gc0;
 	struct grid_cell		 gc;
-	u_int				 width, height, i, needed, x, y;
+	u_int				 width, height, i, needed, sy;
 	char				*tim, line[1024], *name;
 	const char			*tag, *label;
 
@@ -612,14 +506,17 @@ window_client_draw_screen(struct window_pane *wp)
 		screen_write_puts(&ctx, &gc, "%-*.*s", width, width, line);
 	}
 
-	if (height == screen_size_y(s)) {
+	if (height == screen_size_y(s) && width > 4) {
 		screen_write_stop(&ctx);
 		return;
 	}
+
+	sy = screen_size_y(s);
 	c = data->current->c;
+	box = &c->session->curw->window->active->base;
 
 	screen_write_cursormove(&ctx, 0, height);
-	screen_write_box(&ctx, width, screen_size_y(s) - height);
+	screen_write_box(&ctx, width, sy - height);
 
 	if (data->order == WINDOW_CLIENT_BY_TTY_NAME)
 		label = "sort: tty";
@@ -634,9 +531,12 @@ window_client_draw_screen(struct window_pane *wp)
 	}
 
 	screen_write_cursormove(&ctx, 2, height + 1);
-	box = window_client_draw_box(wp, &x, &y);
-	screen_write_copy(&ctx, box, 0, 0, x, y, NULL, NULL);
-	screen_free(box);
+	screen_write_preview(&ctx, box, data->width - 4, sy - data->height - 4);
+	screen_write_cursormove(&ctx, 0, sy - 3);
+	screen_write_line(&ctx, data->width, 1, 1);
+	screen_write_cursormove(&ctx, 2, sy - 2);
+	screen_write_copy(&ctx, &c->status, 0, 0, data->width - 4, 1, NULL,
+	    NULL);
 
 	screen_write_stop(&ctx);
 }

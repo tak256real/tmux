@@ -43,6 +43,12 @@ const struct window_mode window_buffer_mode = {
 	.key = window_buffer_key,
 };
 
+enum window_buffer_order {
+	WINDOW_BUFFER_BY_NAME,
+	WINDOW_BUFFER_BY_TIME,
+	WINDOW_BUFFER_BY_SIZE,
+};
+
 struct window_buffer_data;
 struct window_buffer_item {
 	struct window_buffer_data	*data;
@@ -64,12 +70,6 @@ static int window_buffer_cmp(const struct window_buffer_item *,
 RB_GENERATE_STATIC(window_buffer_tree, window_buffer_item, entry,
     window_buffer_cmp);
 
-enum window_buffer_order {
-	WINDOW_BUFFER_BY_NAME,
-	WINDOW_BUFFER_BY_TIME,
-	WINDOW_BUFFER_BY_SIZE,
-};
-
 struct window_buffer_data {
 	char				*command;
 	struct screen			 screen;
@@ -88,7 +88,7 @@ static void	window_buffer_up(struct window_buffer_data *);
 static void	window_buffer_down(struct window_buffer_data *);
 static void	window_buffer_run_command(struct client *, const char *,
 		    const char *);
-static void	window_buffer_free_tree(struct window_buffer_data *);
+static void	window_buffer_free_tree(struct window_buffer_tree *);
 static void	window_buffer_build_tree(struct window_buffer_data *);
 static void	window_buffer_draw_screen(struct window_pane *);
 
@@ -149,7 +149,7 @@ window_buffer_free(struct window_pane *wp)
 	if (data == NULL)
 		return;
 
-	window_buffer_free_tree(data);
+	window_buffer_free_tree(&data->tree);
 
 	screen_free(&data->screen);
 
@@ -277,11 +277,8 @@ window_buffer_key(struct window_pane *wp, struct client *c,
 			item->tagged = 1;
 		break;
 	case 'O':
-		if (data->order == WINDOW_BUFFER_BY_NAME)
-			data->order = WINDOW_BUFFER_BY_TIME;
-		else if (data->order == WINDOW_BUFFER_BY_TIME)
-			data->order = WINDOW_BUFFER_BY_SIZE;
-		else if (data->order == WINDOW_BUFFER_BY_SIZE)
+		data->order++;
+		if (data->order > WINDOW_BUFFER_BY_SIZE)
 			data->order = WINDOW_BUFFER_BY_NAME;
 		window_buffer_build_tree(data);
 		break;
@@ -358,14 +355,14 @@ window_buffer_run_command(struct client *c, const char *template,
 }
 
 static void
-window_buffer_free_tree(struct window_buffer_data *data)
+window_buffer_free_tree(struct window_buffer_tree *tree)
 {
 	struct window_buffer_item	*item, *item1;
 
-	RB_FOREACH_SAFE(item, window_buffer_tree, &data->tree, item1) {
+	RB_FOREACH_SAFE(item, window_buffer_tree, tree, item1) {
 		free((void*)item->name);
 
-		RB_REMOVE(window_buffer_tree, &data->tree, item);
+		RB_REMOVE(window_buffer_tree, tree, item);
 		free(item);
 	}
 }
@@ -373,11 +370,9 @@ window_buffer_free_tree(struct window_buffer_data *data)
 static void
 window_buffer_build_tree(struct window_buffer_data *data)
 {
-	struct screen			*s = &data->screen;
 	struct paste_buffer		*pb = NULL;
-	struct window_buffer_item	*item;
+	struct window_buffer_item	*item, *current;
 	char				*name;
-	struct window_buffer_item	*current;
 
 	if (data->current != NULL)
 		name = xstrdup(data->current->name);
@@ -385,7 +380,7 @@ window_buffer_build_tree(struct window_buffer_data *data)
 		name = NULL;
 	current = NULL;
 
-	window_buffer_free_tree(data);
+	window_buffer_free_tree(&data->tree);
 
 	while ((pb = paste_walk(pb)) != NULL) {
 		item = xcalloc(1, sizeof *item);
@@ -414,14 +409,14 @@ window_buffer_build_tree(struct window_buffer_data *data)
 		data->current = RB_MIN(window_buffer_tree, &data->tree);
 	free(name);
 
-	data->width = screen_size_x(s);
-	data->height = (screen_size_y(s) / 3) * 2;
+	data->width = screen_size_x(&data->screen);
+	data->height = (screen_size_y(&data->screen) / 3) * 2;
 	if (data->height > data->number)
-		data->height = screen_size_y(s) / 2;
+		data->height = screen_size_y(&data->screen) / 2;
 	if (data->height < 10)
-		data->height = screen_size_y(s);
-	if (screen_size_y(s) - data->height < 2)
-		data->height = screen_size_y(s);
+		data->height = screen_size_y(&data->screen);
+	if (screen_size_y(&data->screen) - data->height < 2)
+		data->height = screen_size_y(&data->screen);
 
 	if (data->current == NULL)
 		return;
@@ -527,6 +522,7 @@ window_buffer_draw_screen(struct window_pane *wp)
 		gc0.attr |= GRID_ATTR_CHARSET;
 		screen_write_cursormove(&ctx, 0, i);
 		screen_write_putc(&ctx, &gc0, 'x');
+		screen_write_putc(&ctx, &gc0, ' ');
 		gc0.attr &= ~GRID_ATTR_CHARSET;
 
 		at = 0;
@@ -537,8 +533,8 @@ window_buffer_draw_screen(struct window_pane *wp)
 			}
 			end++;
 		}
-		if (at > width - 2)
-			at = width - 2;
+		if (at > width - 4)
+			at = width - 4;
 		line[at] = '\0';
 
 		if (*line != '\0')
