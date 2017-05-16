@@ -21,7 +21,7 @@
 #include "tmux.h"
 
 /*
- * Enter client mode.
+ * Enter client choose mode.
  */
 
 static enum cmd_retval	cmd_choose_client_exec(struct cmd *,

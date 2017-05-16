@@ -21,7 +21,7 @@
 #include "tmux.h"
 
 /*
- * Enter buffer mode.
+ * Enter buffer choose mode.
  */
 
 static enum cmd_retval	cmd_choose_buffer_exec(struct cmd *,

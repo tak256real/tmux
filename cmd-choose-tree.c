@@ -20,6 +20,10 @@
 
 #include "tmux.h"
 
+/*
+ * Enter session, window or pane choose mode.
+ */
+
 static enum cmd_retval	cmd_choose_tree_exec(struct cmd *, struct cmdq_item *);
 
 const struct cmd_entry cmd_choose_tree_entry = {
@@ -68,5 +72,6 @@ cmd_choose_tree_exec(struct cmd *self, struct cmdq_item *item)
 	struct window_pane	*wp = item->target.wp;
 
 	window_pane_set_mode(wp, &window_tree_mode, args);
+
 	return (CMD_RETURN_NORMAL);
 }
