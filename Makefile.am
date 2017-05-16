@@ -145,6 +145,7 @@ dist_tmux_SOURCES = \
 	layout-set.c \
 	layout.c \
 	log.c \
+	mode-tree.c \
 	names.c \
 	notify.c \
 	options-table.c \
