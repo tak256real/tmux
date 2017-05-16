@@ -18,9 +18,6 @@
 
 #include <sys/types.h>
 
-#include <ctype.h>
-#include <stdlib.h>
-
 #include "tmux.h"
 
 /*
@@ -35,13 +32,9 @@ const struct cmd_entry cmd_choose_buffer_entry = {
 	.alias = NULL,
 
 	.args = { "t:", 0, 1 },
-	.usage = CMD_TARGET_PANE_USAGE " [template]",
+	.usage = CMD_TARGET_PANE_USAGE,
 
-<<<<<<< HEAD
-	.tflag = CMD_PANE,
-=======
-	.target = { 't', CMD_FIND_WINDOW, 0 },
->>>>>>> master
+	.target = { 't', CMD_FIND_PANE, 0 },
 
 	.flags = 0,
 	.exec = cmd_choose_buffer_exec
@@ -50,59 +43,10 @@ const struct cmd_entry cmd_choose_buffer_entry = {
 static enum cmd_retval
 cmd_choose_buffer_exec(struct cmd *self, struct cmdq_item *item)
 {
-<<<<<<< HEAD
 	struct args		*args = self->args;
-	struct window_pane	*wp = item->state.tflag.wp;
-=======
-	struct args			*args = self->args;
-	struct client			*c = cmd_find_client(item, NULL, 1);
-	struct winlink			*wl = item->target.wl;
-	struct window_choose_data	*cdata;
-	struct paste_buffer		*pb;
-	char				*action, *action_data;
-	const char			*template;
-	u_int				 idx;
-
-	if (c == NULL) {
-		cmdq_error(item, "no client available");
-		return (CMD_RETURN_ERROR);
-	}
-
-	if ((template = args_get(args, 'F')) == NULL)
-		template = CHOOSE_BUFFER_TEMPLATE;
-
-	if (paste_get_top(NULL) == NULL)
-		return (CMD_RETURN_NORMAL);
-
-	if (window_pane_set_mode(wl->window->active, &window_choose_mode) != 0)
-		return (CMD_RETURN_NORMAL);
-
-	if (args->argc != 0)
-		action = xstrdup(args->argv[0]);
-	else
-		action = xstrdup("paste-buffer -b '%%'");
-
-	idx = 0;
-	pb = NULL;
-	while ((pb = paste_walk(pb)) != NULL) {
-		cdata = window_choose_data_create(TREE_OTHER, c, c->session);
-		cdata->idx = idx;
-
-		cdata->ft_template = xstrdup(template);
-		format_defaults_paste_buffer(cdata->ft, pb);
-
-		xasprintf(&action_data, "%s", paste_buffer_name(pb));
-		cdata->command = cmd_template_replace(action, action_data, 1);
-		free(action_data);
-
-		window_choose_add(wl->window->active, cdata);
-		idx++;
-	}
-	free(action);
->>>>>>> master
+	struct window_pane	*wp = item->target.wp;
 
 	if (paste_get_top(NULL) != NULL)
 		window_pane_set_mode(wp, &window_buffer_mode, args);
-
 	return (CMD_RETURN_NORMAL);
 }

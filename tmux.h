@@ -695,20 +695,9 @@ struct screen_write_ctx {
  * right function to handle input and output.
  */
 struct window_mode {
-<<<<<<< HEAD
-	struct screen *(*init)(struct window_pane *, struct args *);
-	void	(*free)(struct window_pane *);
-	void	(*resize)(struct window_pane *, u_int, u_int);
-	void	(*key)(struct window_pane *, struct client *, struct session *,
-		    key_code, struct mouse_event *);
-
-	const char *(*key_table)(struct window_pane *);
-	void	(*command)(struct window_pane *, struct client *,
-		    struct session *, struct args *, struct mouse_event *);
-=======
 	const char	*name;
 
-	struct screen	*(*init)(struct window_pane *);
+	struct screen	*(*init)(struct window_pane *, struct args *);
 	void		 (*free)(struct window_pane *);
 	void		 (*resize)(struct window_pane *, u_int, u_int);
 	void		 (*key)(struct window_pane *, struct client *,
@@ -718,7 +707,6 @@ struct window_mode {
 	void		 (*command)(struct window_pane *, struct client *,
 			     struct session *, struct args *,
 			     struct mouse_event *);
->>>>>>> master
 };
 #define WINDOW_MODE_TIMEOUT 180
 
@@ -1364,11 +1352,7 @@ struct client {
 #define CLIENT_STATUSFORCE 0x80000
 #define CLIENT_DOUBLECLICK 0x100000
 #define CLIENT_TRIPLECLICK 0x200000
-<<<<<<< HEAD
-#define CLIENT_DETACHING 0x400000
-=======
 #define CLIENT_SIZECHANGED 0x400000
->>>>>>> master
 	int		 flags;
 	struct key_table *keytable;
 
@@ -1853,12 +1837,9 @@ void	 server_update_socket(void);
 void	 server_add_accept(int);
 
 /* server-client.c */
-<<<<<<< HEAD
 u_int	 server_client_how_many(void);
-=======
 void	 server_client_set_identify(struct client *);
 void	 server_client_clear_identify(struct client *, struct window_pane *);
->>>>>>> master
 void	 server_client_set_key_table(struct client *, const char *);
 const char *server_client_get_key_table(struct client *);
 int	 server_client_check_nested(struct client *);
@@ -2013,14 +1994,10 @@ void	 screen_write_vnputs(struct screen_write_ctx *, ssize_t,
 void	 screen_write_putc(struct screen_write_ctx *, const struct grid_cell *,
 	     u_char);
 void	 screen_write_copy(struct screen_write_ctx *, struct screen *, u_int,
-<<<<<<< HEAD
-	     u_int, u_int, u_int);
+	     u_int, u_int, u_int, bitstr_t *, const struct grid_cell *);
 void	 screen_write_box(struct screen_write_ctx *, u_int, u_int);
 void	 screen_write_preview(struct screen_write_ctx *, struct screen *, u_int,
 	     u_int);
-=======
-	     u_int, u_int, u_int, bitstr_t *, const struct grid_cell *);
->>>>>>> master
 void	 screen_write_backspace(struct screen_write_ctx *);
 void	 screen_write_mode_set(struct screen_write_ctx *, int);
 void	 screen_write_mode_clear(struct screen_write_ctx *, int);
@@ -2201,7 +2178,9 @@ u_int		 layout_set_previous(struct window *);
 
 /* window-buffer.c */
 extern const struct window_mode window_buffer_mode;
-extern const struct window_mode choose_tree_mode;
+
+/* window-tree.c */
+extern const struct window_mode window_tree_mode;
 
 /* window-clock.c */
 extern const struct window_mode window_clock_mode;

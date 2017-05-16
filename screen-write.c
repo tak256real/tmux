@@ -476,7 +476,8 @@ screen_write_preview(struct screen_write_ctx *ctx, struct screen *src, u_int nx,
 		py = 0;
 	}
 
-	screen_write_copy(ctx, src, px, src->grid->hsize + py, nx, ny);
+	screen_write_copy(ctx, src, px, src->grid->hsize + py, nx, ny, NULL,
+	    NULL);
 
 	if (src->mode & MODE_CURSOR) {
 		grid_view_get_cell(src->grid, src->cx, src->cy, &gc);

@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "tmux.h"
 
@@ -340,7 +341,8 @@ window_buffer_run_command(struct client *c, const char *template,
 	if (command == NULL || *command == '\0')
 		return;
 
-	if (cmd_string_parse(command, &cmdlist, NULL, 0, &cause) != 0) {
+	cmdlist = cmd_string_parse(command, NULL, 0, &cause);
+	if (cmdlist == NULL) {
 		if (cause != NULL && c != NULL) {
 			*cause = toupper((u_char)*cause);
 			status_message_set(c, "%s", cause);

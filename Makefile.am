@@ -61,7 +61,6 @@ dist_tmux_SOURCES = \
 	arguments.c \
 	attributes.c \
 	cfg.c \
-	choose-tree.c \
 	client.c \
 	cmd-attach-session.c \
 	cmd-bind-key.c \
@@ -175,6 +174,7 @@ dist_tmux_SOURCES = \
 	window-client.c \
 	window-clock.c \
 	window-copy.c \
+	window-tree.c \
 	window.c \
 	xmalloc.c \
 	xmalloc.h \

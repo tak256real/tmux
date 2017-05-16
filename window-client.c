@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "tmux.h"
 
@@ -351,7 +352,8 @@ window_client_run_command(struct client *c, const char *template,
 	if (command == NULL || *command == '\0')
 		return;
 
-	if (cmd_string_parse(command, &cmdlist, NULL, 0, &cause) != 0) {
+	cmdlist = cmd_string_parse(command, NULL, 0, &cause);
+	if (cmdlist == NULL) {
 		if (cause != NULL && c != NULL) {
 			*cause = toupper((u_char)*cause);
 			status_message_set(c, "%s", cause);
@@ -515,7 +517,7 @@ window_client_draw_box(struct window_pane *wp, u_int *x, u_int *y)
 	screen_write_cursormove(&ctx, 0, 5);
 	screen_write_puts(&ctx, &gc, "TERM");
 	screen_write_cursormove(&ctx, 16, 5);
-	screen_write_nputs(&ctx, limit, &gc0, "%s", c->tty.termname);
+	screen_write_nputs(&ctx, limit, &gc0, "%s", c->tty.term_name);
 
 	screen_write_cursormove(&ctx, 0, 6);
 	screen_write_puts(&ctx, &gc, "UTF-8");
@@ -536,7 +538,7 @@ window_client_draw_box(struct window_pane *wp, u_int *x, u_int *y)
 	screen_write_cursormove(&ctx, 0, 8);
 	screen_write_puts(&ctx, &gc, "status line");
 	screen_write_cursormove(&ctx, 16, 8);
-	screen_write_copy(&ctx, &c->status, 0, 0, (*x) - 16, 1);
+	screen_write_copy(&ctx, &c->status, 0, 0, (*x) - 16, 1, NULL, NULL);
 
 	screen_write_cursormove(&ctx, 0, 9);
 	screen_write_puts(&ctx, &gc, "current pane");
@@ -562,7 +564,7 @@ window_client_draw_screen(struct window_pane *wp)
 	struct screen_write_ctx	 	 ctx;
 	struct grid_cell		 gc0;
 	struct grid_cell		 gc;
-	u_int				 width, height, i, needed, limit, x, y;
+	u_int				 width, height, i, needed, x, y;
 	char				*tim, line[1024], *name;
 	const char			*tag, *label;
 
@@ -614,7 +616,6 @@ window_client_draw_screen(struct window_pane *wp)
 		screen_write_stop(&ctx);
 		return;
 	}
-	limit = width - 18;
 	c = data->current->c;
 
 	screen_write_cursormove(&ctx, 0, height);
@@ -634,7 +635,7 @@ window_client_draw_screen(struct window_pane *wp)
 
 	screen_write_cursormove(&ctx, 2, height + 1);
 	box = window_client_draw_box(wp, &x, &y);
-	screen_write_copy(&ctx, box, 0, 0, x, y);
+	screen_write_copy(&ctx, box, 0, 0, x, y, NULL, NULL);
 	screen_free(box);
 
 	screen_write_stop(&ctx);
