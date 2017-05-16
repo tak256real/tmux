@@ -1,4 +1,4 @@
-/* $OpenBSD$ */
+/* $OpenBSD: screen-write.c,v 1.124 2017/05/12 14:56:56 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicholas.marriott@gmail.com>
@@ -423,7 +423,6 @@ screen_write_box(struct screen_write_ctx *ctx, u_int nx, u_int ny)
 	memcpy(&gc, &grid_default_cell, sizeof gc);
 	gc.attr |= GRID_ATTR_CHARSET;
 
-	screen_write_cursormove(ctx, cx, cy);
 	screen_write_putc(ctx, &gc, 'l');
 	for (i = 1; i < nx - 1; i++)
 		screen_write_putc(ctx, &gc, 'q');
@@ -456,15 +455,8 @@ screen_write_preview(struct screen_write_ctx *ctx, struct screen *src, u_int nx,
 	struct grid_cell	 gc;
 	u_int			 cx, cy, px, py;
 
-	screen_write_box(ctx, nx, ny);
-	if (nx <= 2 || ny <= 2)
-		return;
-	nx -= 2; ny -= 2;
-
 	cx = s->cx;
 	cy = s->cy;
-
-	screen_write_cursormove(ctx, cx + 1, cy + 1);
 
 	/*
 	 * If the cursor is on, pick the area around the cursor, otherwise use
@@ -504,8 +496,8 @@ screen_write_preview(struct screen_write_ctx *ctx, struct screen *src, u_int nx,
 	if (src->mode & MODE_CURSOR) {
 		grid_view_get_cell(src->grid, src->cx, src->cy, &gc);
 		gc.attr |= GRID_ATTR_REVERSE;
-		screen_write_cursormove(ctx, cx + 1 + (src->cx - px),
-		    cy + 1 + (src->cy - py));
+		screen_write_cursormove(ctx, cx + (src->cx - px),
+		    cy + (src->cy - py));
 		screen_write_cell(ctx, &gc);
 	}
 }
