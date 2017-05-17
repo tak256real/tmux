@@ -381,7 +381,8 @@ mode_tree_draw(struct mode_tree_data *mtd)
 
 			start = xcalloc(1, size);
 			for (j = 1; j < line->depth; j++) {
-				if (i == mtd->line_size - 1)
+				if (mti->parent != NULL &&
+				    mtd->line_list[mti->parent->line].last)
 					strlcat(start, "    ", size);
 				else
 					strlcat(start, "\001x\001   ", size);
