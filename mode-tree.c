@@ -339,10 +339,10 @@ mode_tree_draw(struct mode_tree_data *mtd)
 	struct options		*oo = wp->window->options;
 	struct screen_write_ctx	 ctx;
 	struct grid_cell	 gc0, gc;
-	u_int			 w, h, i, sy, box_x, box_y;
-	char			*text, *start, *cp;
+	u_int			 w, h, i, j, sy, box_x, box_y;
+	char			*text, *start;
 	const char		*tag, *symbol;
-	size_t			 size, n;
+	size_t			 size;
 
 	memcpy(&gc0, &grid_default_cell, sizeof gc0);
 	memcpy(&gc, &grid_default_cell, sizeof gc);
@@ -377,17 +377,20 @@ mode_tree_draw(struct mode_tree_data *mtd)
 		if (line->depth == 0)
 			start = xstrdup(symbol);
 		else {
-			size = (4 * line->depth) + 16;
-			start = xcalloc(1, size);
-			n = 4 * (line->depth - 1);
-			memset(start, ' ', n);
-			cp = start + n;
+			size = (4 * line->depth) + 32;
 
+			start = xcalloc(1, size);
+			for (j = 1; j < line->depth; j++) {
+				if (i == mtd->line_size - 1)
+					strlcat(start, "    ", size);
+				else
+					strlcat(start, "\001x\001   ", size);
+			}
 			if (line->last)
-				strlcat(cp, "\001mq\001> ", size);
+				strlcat(start, "\001mq\001> ", size);
 			else
-				strlcat(cp, "\001tq\001> ", size);
-			strlcat(cp, symbol, size);
+				strlcat(start, "\001tq\001> ", size);
+			strlcat(start, symbol, size);
 		}
 
 		if (mti->tagged)
