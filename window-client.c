@@ -255,10 +255,27 @@ window_client_resize(struct window_pane *wp, u_int sx, u_int sy)
 }
 
 static void
+window_client_do_detach(void* modedata, void *itemdata, key_code key)
+{
+	struct window_client_modedata	*data = modedata;
+	struct window_client_itemdata	*item = itemdata;
+
+	if (item == mode_tree_get_current(data->data))
+		mode_tree_down(data->data, 0);
+	if (key == 'd' || key == 'D')
+		server_client_detach(item->c, MSG_DETACH);
+	else if (key == 'x' || key == 'X')
+		server_client_detach(item->c, MSG_DETACHKILL);
+	else if (key == 'z' || key == 'Z')
+		server_client_suspend(item->c);
+}
+
+static void
 window_client_key(struct window_pane *wp, __unused struct client *c,
     __unused struct session *s, key_code key, struct mouse_event *m)
 {
 	struct window_client_modedata	*data = wp->modedata;
+	struct window_client_itemdata	*item;
 	int				 finished;
 
 	/*
@@ -272,42 +289,27 @@ window_client_key(struct window_pane *wp, __unused struct client *c,
 	 * D = detach tagged clients
 	 * x = detach and kill client
 	 * X = detach and kill tagged clients
+	 * z = suspend client
+	 * Z = suspend tagged clients
 	 * ENTER = detach client
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
-#if 0
 	switch (key) {
 	case 'd':
 	case 'x':
 	case 'z':
-		item = data->current;
-		window_client_down(data);
-		if (key == 'd')
-			server_client_detach(item->c, MSG_DETACH);
-		else if (key == 'x')
-			server_client_detach(item->c, MSG_DETACHKILL);
-		else if (key == 'z')
-			server_client_suspend(item->c);
-		window_client_build_tree(data);
+		item = mode_tree_get_current(data->data);
+		window_client_do_detach(data, item, key);
+		mode_tree_build(data->data);
 		break;
 	case 'D':
 	case 'X':
 	case 'Z':
-		RB_FOREACH(item, window_client_tree, &data->tree) {
-			if (!item->tagged)
-				continue;
-			if (item == data->current)
-				window_client_down(data);
-			if (key == 'D')
-				server_client_detach(item->c, MSG_DETACH);
-			else if (key == 'X')
-				server_client_detach(item->c, MSG_DETACHKILL);
-			else if (key == 'Z')
-				server_client_suspend(item->c);
-		}
-		window_client_build_tree(data);
+		mode_tree_each_tagged(data->data, window_client_do_detach, key);
+		mode_tree_build(data->data);
 		break;
+#if 0
 	case '\r':
 		command = xstrdup(data->command);
 		name = xstrdup(data->current->c->ttyname);
@@ -316,8 +318,8 @@ window_client_key(struct window_pane *wp, __unused struct client *c,
 		free(name);
 		free(command);
 		return;
-	}
 #endif
+	}
 	if (finished || server_client_how_many() == 0)
 		window_pane_reset_mode(wp);
 	else {

@@ -2179,7 +2179,10 @@ u_int		 layout_set_previous(struct window *);
 
 /* mode-tree.c */
 void	*mode_tree_get_current(struct mode_tree_data *);
-void	 mode_tree_each_tagged(struct mode_tree_data *, void (*)(void *));
+void	 mode_tree_each_tagged(struct mode_tree_data *, void (*)(void *, void *,
+	     key_code), key_code);
+void	 mode_tree_up(struct mode_tree_data *, int);
+void	 mode_tree_down(struct mode_tree_data *, int);
 struct mode_tree_data *mode_tree_start(struct window_pane *,
 	     void (*)(void *, u_int), struct screen *(*)(void *, void *, u_int,
 	     u_int), void *, const char **, u_int , struct screen **);

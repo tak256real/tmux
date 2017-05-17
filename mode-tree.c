@@ -150,7 +150,7 @@ mode_tree_build_lines(struct mode_tree_data *mtd,
 	}
 }
 
-static void
+void
 mode_tree_up(struct mode_tree_data *mtd, int wrap)
 {
 	if (mtd->current == 0) {
@@ -166,7 +166,7 @@ mode_tree_up(struct mode_tree_data *mtd, int wrap)
 	}
 }
 
-static void
+void
 mode_tree_down(struct mode_tree_data *mtd, int wrap)
 {
 	if (mtd->current == mtd->line_size - 1) {
@@ -188,13 +188,16 @@ mode_tree_get_current(struct mode_tree_data *mtd)
 }
 
 void
-mode_tree_each_tagged(struct mode_tree_data *mtd, void (*cb)(void *))
+mode_tree_each_tagged(struct mode_tree_data *mtd, void (*cb)(void *, void *,
+    key_code), key_code key)
 {
-	u_int	i;
+	struct mode_tree_item	*mti;
+	u_int			 i;
 
 	for (i = 0; i < mtd->line_size; i++) {
-		if (mtd->line_list[i].item->tagged)
-			cb(mtd->line_list[i].item->itemdata);
+		mti = mtd->line_list[i].item;
+		if (mti->tagged)
+			cb(mtd->modedata, mti->itemdata, key);
 	}
 }
 
