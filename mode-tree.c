@@ -265,8 +265,11 @@ mode_tree_add(struct mode_tree_data *mtd, struct mode_tree_item *parent,
 	mti->text = xstrdup(text);
 
 	saved = mode_tree_find_item(&mtd->saved, tag);
-	if (saved != NULL)
+	if (saved != NULL) {
+		if (parent == NULL || (parent != NULL && parent->expanded))
+			mti->tagged = saved->tagged;
 		mti->expanded = saved->expanded;
+	}
 
 	TAILQ_INIT (&mti->children);
 
@@ -367,7 +370,8 @@ mode_tree_draw(struct mode_tree_data *mtd)
 int
 mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 {
-	u_int	x, y;
+	struct mode_tree_item	*current;
+	u_int			 i, x, y;
 
 	if (*key == KEYC_MOUSEDOWN1_PANE) {
 		if (cmd_mouse_at(mtd->wp, m, &x, &y, 0) != 0) {
@@ -428,20 +432,19 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 		else
 			mtd->offset = 0;
 		break;
-#if 0
 	case 't':
-		mtd->current->tagged = !mtd->current->tagged;
+		current = mtd->line_list[mtd->current].item;
+		current->tagged = !current->tagged;
 		mode_tree_down(mtd);
 		break;
 	case 'T':
-		RB_FOREACH(item, mode_tree_tree, &mtd->tree)
-			item->tagged = 0;
+		for (i = 0; i < mtd->line_size; i++)
+			mtd->line_list[i].item->tagged = 0;
 		break;
 	case '\024': /* C-t */
-		RB_FOREACH(item, mode_tree_tree, &mtd->tree)
-			item->tagged = 1;
+		for (i = 0; i < mtd->line_size; i++)
+			mtd->line_list[i].item->tagged = 1;
 		break;
-#endif
 	case 'O':
 		mtd->sort_type++;
 		if (mtd->sort_type == mtd->sort_size)
