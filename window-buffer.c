@@ -276,10 +276,24 @@ window_buffer_resize(struct window_pane *wp, u_int sx, u_int sy)
 }
 
 static void
+window_buffer_do_delete(void* modedata, void *itemdata, __unused key_code key)
+{
+	struct window_buffer_modedata	*data = modedata;
+	struct window_buffer_itemdata	*item = itemdata;
+	struct paste_buffer		*pb;
+
+	if (item == mode_tree_get_current(data->data))
+		mode_tree_down(data->data, 0);
+	if ((pb = paste_get_name(item->name)) != NULL)
+		paste_free(pb);
+}
+
+static void
 window_buffer_key(struct window_pane *wp, __unused struct client *c,
     __unused struct session *s, key_code key, struct mouse_event *m)
 {
 	struct window_buffer_modedata	*data = wp->modedata;
+	struct window_client_itemdata	*item;
 	int				 finished;
 
 	/*
@@ -295,26 +309,17 @@ window_buffer_key(struct window_pane *wp, __unused struct client *c,
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
-#if 0
 	switch (key) {
 	case 'd':
-		item = data->current;
-		window_buffer_down(data);
-		if ((pb = paste_get_name(item->name)) != NULL)
-			paste_free(pb);
-		window_buffer_build_tree(data);
+		item = mode_tree_get_current(data->data);
+		window_buffer_do_delete(data, item, key);
+		mode_tree_build(data->data);
 		break;
 	case 'D':
-		RB_FOREACH(item, window_buffer_tree, &data->tree) {
-			if (!item->tagged)
-				continue;
-			if (item == data->current)
-				window_buffer_down(data);
-			if ((pb = paste_get_name(item->name)) != NULL)
-				paste_free(pb);
-		}
-		window_buffer_build_tree(data);
+		mode_tree_each_tagged(data->data, window_buffer_do_delete, key);
+		mode_tree_build(data->data);
 		break;
+#if 0
 	case '\r':
 		command = xstrdup(data->command);
 		name = xstrdup(data->current->name);
@@ -323,8 +328,8 @@ window_buffer_key(struct window_pane *wp, __unused struct client *c,
 		free(name);
 		free(command);
 		return;
-	}
 #endif
+	}
 	if (finished || paste_get_top(NULL) == NULL)
 		window_pane_reset_mode(wp);
 	else {
