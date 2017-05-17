@@ -248,9 +248,7 @@ window_client_key(struct window_pane *wp, __unused struct client *c,
     __unused struct session *s, key_code key, struct mouse_event *m)
 {
 	struct window_client_modedata	*data = wp->modedata;
-	struct window_client_itemdata	*item;
-	int				 finished, found;
-	char				*command, *name;
+	int				 finished;
 
 	/*
 	 * t = toggle client tag

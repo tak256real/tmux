@@ -141,6 +141,23 @@ mode_tree_down(struct mode_tree_data *mtd)
 	}
 }
 
+void *
+mode_tree_get_current(struct mode_tree_data *mtd)
+{
+	return (mtd->line_list[mtd->current].item->itemdata);
+}
+
+void
+mode_tree_each_tagged(struct mode_tree_data *mtd, void (*cb)(void *))
+{
+	u_int	i;
+
+	for (i = 0; i < mtd->line_size; i++) {
+		if (mtd->line_list[i].item->tagged)
+			cb(mtd->line_list[i].item->itemdata);
+	}
+}
+
 struct mode_tree_data *
 mode_tree_start(struct window_pane *wp, void (*buildcb)(void *, u_int),
     struct screen *(*drawcb)(void *, void *, u_int, u_int), void *modedata,
@@ -249,7 +266,6 @@ mode_tree_draw(struct mode_tree_data *mtd)
 	struct screen		*s = &mtd->screen, *box;
 	struct mode_tree_line	*line;
 	struct mode_tree_item	*mti;
-	struct client		*c;
 	struct options		*oo = wp->window->options;
 	struct screen_write_ctx	 ctx;
 	struct grid_cell	 gc0, gc;

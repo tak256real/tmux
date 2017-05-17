@@ -47,7 +47,7 @@ struct cmdq_list;
 struct environ;
 struct format_job_tree;
 struct input_ctx;
-struct mode_key_cmdstr;
+struct mode_tree_data;
 struct mouse_event;
 struct options;
 struct options_entry;
@@ -2178,18 +2178,20 @@ u_int		 layout_set_next(struct window *);
 u_int		 layout_set_previous(struct window *);
 
 /* mode-tree.c */
+void	*mode_tree_get_current(struct mode_tree_data *);
+void	 mode_tree_each_tagged(struct mode_tree_data *, void (*)(void *));
 struct mode_tree_data *mode_tree_start(struct window_pane *,
-	    void (*)(void *, u_int), struct screen *(*)(void *, void *, u_int,
-	    u_int), void *, const char **, u_int , struct screen **);
-void	mode_tree_build(struct mode_tree_data *);
-void	mode_tree_free(struct mode_tree_data *);
-void	mode_tree_resize(struct mode_tree_data *, u_int, u_int);
+	     void (*)(void *, u_int), struct screen *(*)(void *, void *, u_int,
+	     u_int), void *, const char **, u_int , struct screen **);
+void	 mode_tree_build(struct mode_tree_data *);
+void	 mode_tree_free(struct mode_tree_data *);
+void	 mode_tree_resize(struct mode_tree_data *, u_int, u_int);
 struct mode_tree_item *mode_tree_add(struct mode_tree_data *,
-	    struct mode_tree_item *, void *, uint64_t, const char *,
-	    const char *);
-void	mode_tree_draw(struct mode_tree_data *);
-int	mode_tree_key(struct mode_tree_data *, key_code *,
-	    struct mouse_event *);
+	     struct mode_tree_item *, void *, uint64_t, const char *,
+	     const char *);
+void	 mode_tree_draw(struct mode_tree_data *);
+int	 mode_tree_key(struct mode_tree_data *, key_code *,
+	     struct mouse_event *);
 
 /* window-buffer.c */
 extern const struct window_mode window_buffer_mode;
