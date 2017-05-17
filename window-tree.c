@@ -321,7 +321,8 @@ window_tree_build(void *modedata, u_int sort_type)
 				item->pane = wp->id;
 
 				text = format_single(NULL,
-				    "#{pane_tty} \"#{pane_title}\"",
+				    "#{pane_current_command} (#{pane_tty}) "
+				    "\"#{pane_title}\"",
 				    NULL, s, wl, wp);
 				xasprintf(&name, "%u", k);
 
