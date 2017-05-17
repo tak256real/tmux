@@ -1,7 +1,7 @@
 /* $OpenBSD$ */
 
 /*
- * Copyright (c) 2016 Nicholas Marriott <nicholas.marriott@gmail.com>
+ * Copyright (c) 2017 Nicholas Marriott <nicholas.marriott@gmail.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,11 +25,11 @@
 // man page
 // do we want to use send -X or not?
 // choose-tree flags to start with sessions, windows, panes, expanded
+// splitw crash
 //
 
 #include <sys/types.h>
 
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
