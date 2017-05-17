@@ -26,6 +26,7 @@
 // do we want to use send -X or not?
 // choose-tree flags to start with sessions, windows, panes, expanded
 // splitw crash
+// crash when killw mode's window
 //
 
 #include <sys/types.h>

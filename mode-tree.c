@@ -596,6 +596,7 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 			current->tagged = 1;
 		} else
 			current->tagged = 0;
+		mode_tree_down(mtd, 0);
 		break;
 	case 'T':
 		for (i = 0; i < mtd->line_size; i++)
