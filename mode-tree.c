@@ -55,7 +55,9 @@ struct mode_tree_data {
 };
 
 struct mode_tree_item {
+	struct mode_tree_item		*parent;
 	void				*itemdata;
+	u_int				 line;
 
 	uint64_t			 tag;
 	const char			*name;
@@ -133,6 +135,7 @@ mode_tree_build_lines(struct mode_tree_data *mtd,
 		line->depth = depth;
 		line->last = (mti == TAILQ_LAST(mtl, mode_tree_list));
 
+		mti->line = (mtd->line_size - 1);
 		if (!TAILQ_EMPTY(&mti->children))
 			flat = 0;
 		if (mti->expanded)
@@ -148,12 +151,14 @@ mode_tree_build_lines(struct mode_tree_data *mtd,
 }
 
 static void
-mode_tree_up(struct mode_tree_data *mtd)
+mode_tree_up(struct mode_tree_data *mtd, int wrap)
 {
 	if (mtd->current == 0) {
-		mtd->current = mtd->line_size - 1;
-		if (mtd->line_size >= mtd->height)
-			mtd->offset = mtd->line_size - mtd->height;
+		if (wrap) {
+			mtd->current = mtd->line_size - 1;
+			if (mtd->line_size >= mtd->height)
+				mtd->offset = mtd->line_size - mtd->height;
+		}
 	} else {
 		mtd->current--;
 		if (mtd->current < mtd->offset)
@@ -162,11 +167,13 @@ mode_tree_up(struct mode_tree_data *mtd)
 }
 
 static void
-mode_tree_down(struct mode_tree_data *mtd)
+mode_tree_down(struct mode_tree_data *mtd, int wrap)
 {
 	if (mtd->current == mtd->line_size - 1) {
-		mtd->current = 0;
-		mtd->offset = 0;
+		if (wrap) {
+			mtd->current = 0;
+			mtd->offset = 0;
+		}
 	} else {
 		mtd->current++;
 		if (mtd->current > mtd->offset + mtd->height - 1)
@@ -242,7 +249,7 @@ mode_tree_build(struct mode_tree_data *mtd)
 	mode_tree_build_lines(mtd, &mtd->children, 0);
 
 	for (i = 0; i < mtd->line_size; i++) {
-		if (mtd->line_list[mtd->current].item->tag == tag)
+		if (mtd->line_list[i].item->tag == tag)
 			break;
 	}
 	if (i != mtd->line_size)
@@ -294,6 +301,7 @@ mode_tree_add(struct mode_tree_data *mtd, struct mode_tree_item *parent,
 	    name, text);
 
 	mti = xcalloc(1, sizeof *mti);
+	mti->parent = parent;
 	mti->itemdata = itemdata;
 
 	mti->tag = tag;
@@ -432,6 +440,7 @@ mode_tree_draw(struct mode_tree_data *mtd)
 int
 mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 {
+	struct mode_tree_line	*line;
 	struct mode_tree_item	*current;
 	u_int			 i, x, y;
 
@@ -451,6 +460,9 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 		}
 	}
 
+	line = &mtd->line_list[mtd->current];
+	current = line->item;
+
 	switch (*key) {
 	case 'q':
 	case '\033': /* Escape */
@@ -458,19 +470,19 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 	case KEYC_UP:
 	case 'k':
 	case KEYC_WHEELUP_PANE:
-		mode_tree_up(mtd);
+		mode_tree_up(mtd, 1);
 		break;
 	case KEYC_DOWN:
 	case 'j':
 	case KEYC_WHEELDOWN_PANE:
-		mode_tree_down(mtd);
+		mode_tree_down(mtd, 1);
 		break;
 	case KEYC_PPAGE:
 	case '\002': /* C-b */
 		for (i = 0; i < mtd->height; i++) {
 			if (mtd->current == 0)
 				break;
-			mode_tree_up(mtd);
+			mode_tree_up(mtd, 1);
 		}
 		break;
 	case KEYC_NPAGE:
@@ -478,7 +490,7 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 		for (i = 0; i < mtd->height; i++) {
 			if (mtd->current == mtd->line_size - 1)
 				break;
-			mode_tree_down(mtd);
+			mode_tree_down(mtd, 1);
 		}
 		break;
 	case KEYC_HOME:
@@ -493,9 +505,8 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 			mtd->offset = 0;
 		break;
 	case 't':
-		current = mtd->line_list[mtd->current].item;
 		current->tagged = !current->tagged;
-		mode_tree_down(mtd);
+		mode_tree_down(mtd, 1);
 		break;
 	case 'T':
 		for (i = 0; i < mtd->line_size; i++)
@@ -511,34 +522,27 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 			mtd->sort_type = 0;
 		mode_tree_build(mtd);
 		break;
-#if 0
 	case KEYC_LEFT:
 	case '-':
-		item = data->current;
-		if (item->type == WINDOW_CHOOSE2_SESSION && !item->expanded) {
-			if (data->current->number != 0)
-				window_choose2_up(data);
-			break;
+		if (line->flat || !current->expanded)
+			current = current->parent;
+		if (current == NULL)
+			mode_tree_up(mtd, 0);
+		else {
+			current->expanded = 0;
+			mtd->current = current->line;
+			mode_tree_build(mtd);
 		}
-		if (item->type == WINDOW_CHOOSE2_WINDOW && !item->expanded)
-			item = item->parent;
-		else if (item->type == WINDOW_CHOOSE2_PANE)
-			item = item->parent;
-		item->expanded = 0;
-		data->current = item;
-		window_choose2_build_tree(data);
 		break;
 	case KEYC_RIGHT:
 	case '+':
-		item = data->current;
-		if (item->type == WINDOW_CHOOSE2_PANE)
-			item = item->parent;
-		item->expanded = 1;
-		window_choose2_build_tree(data);
-		if (data->current->number != data->number - 1)
-			window_choose2_down(data);
+		if (line->flat || current->expanded)
+			mode_tree_down(mtd, 0);
+		else if (!line->flat) {
+			current->expanded = 1;
+			mode_tree_build(mtd);
+		}
 		break;
-#endif
 	}
 	return (0);
 }
