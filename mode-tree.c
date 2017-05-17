@@ -403,11 +403,10 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 	case KEYC_WHEELDOWN_PANE:
 		mode_tree_down(mtd);
 		break;
-#if 0
 	case KEYC_PPAGE:
 	case '\002': /* C-b */
 		for (i = 0; i < mtd->height; i++) {
-			if (mtd->current->number == 0)
+			if (mtd->current == 0)
 				break;
 			mode_tree_up(mtd);
 		}
@@ -415,12 +414,11 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 	case KEYC_NPAGE:
 	case '\006': /* C-f */
 		for (i = 0; i < mtd->height; i++) {
-			if (mtd->current->number == mtd->number - 1)
+			if (mtd->current == mtd->line_size - 1)
 				break;
 			mode_tree_down(mtd);
 		}
 		break;
-#endif
 	case KEYC_HOME:
 		mtd->current = 0;
 		mtd->offset = 0;

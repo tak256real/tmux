@@ -139,7 +139,7 @@ window_buffer_build(void *modedata, u_int sort_type)
 		item->order = paste_buffer_order(pb);
 	}
 
-		switch (sort_type) {
+	switch (sort_type) {
 	case WINDOW_BUFFER_BY_NAME:
 		qsort(data->item_list, data->item_size, sizeof *data->item_list,
 		    window_buffer_compare_name);
