@@ -43,10 +43,12 @@ const struct window_mode window_tree_mode = {
 };
 
 enum window_tree_sort_type {
+	WINDOW_TREE_BY_INDEX,
 	WINDOW_TREE_BY_NAME,
 	WINDOW_TREE_BY_TIME,
 };
 static const char *window_tree_sort_list[] = {
+	"index",
 	"name",
 	"time"
 };
@@ -210,6 +212,8 @@ window_tree_build(void *modedata, u_int sort_type)
 		ss[ssn++] = s;
 	}
 	switch (sort_type) {
+	case WINDOW_TREE_BY_INDEX:
+		break;
 	case WINDOW_TREE_BY_NAME:
 		qsort(ss, ssn, sizeof *ss, window_tree_cmp_session_name);
 		break;
@@ -246,6 +250,8 @@ window_tree_build(void *modedata, u_int sort_type)
 			ww[wwn++] = wl;
 		}
 		switch (sort_type) {
+		case WINDOW_TREE_BY_INDEX:
+			break;
 		case WINDOW_TREE_BY_NAME:
 			qsort(ww, wwn, sizeof *ww, window_tree_cmp_window_name);
 			break;
@@ -282,6 +288,8 @@ window_tree_build(void *modedata, u_int sort_type)
 				pp[ppn++] = wp;
 			}
 			switch (sort_type) {
+			case WINDOW_TREE_BY_INDEX:
+				break;
 			case WINDOW_TREE_BY_NAME:
 				/*
 				 * Panes don't have names, so leave in number
