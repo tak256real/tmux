@@ -28,14 +28,7 @@
  * Find window containing text.
  */
 
-#define FIND_WINDOW_TEMPLATE					\
-	"#{window_index}: #{window_name} "			\
-	"[#{window_width}x#{window_height}] "			\
-	"(#{window_panes} panes) #{window_find_matches}"
-
 static enum cmd_retval	cmd_find_window_exec(struct cmd *, struct cmdq_item *);
-
-static void		cmd_find_window_callback(struct window_choose_data *);
 
 /* Flags for determining matching behavior. */
 #define CMD_FIND_WINDOW_BY_TITLE   0x1
@@ -51,15 +44,16 @@ const struct cmd_entry cmd_find_window_entry = {
 	.name = "find-window",
 	.alias = "findw",
 
-	.args = { "F:CNt:T", 1, 4 },
-	.usage = "[-CNT] [-F format] " CMD_TARGET_WINDOW_USAGE " match-string",
+	.args = { "CNt:T", 1, 4 },
+	.usage = "[-CNT] " CMD_TARGET_PANE_USAGE " match-string",
 
-	.target = { 't', CMD_FIND_WINDOW, 0 },
+	.target = { 't', CMD_FIND_PANE, 0 },
 
 	.flags = 0,
 	.exec = cmd_find_window_exec
 };
 
+#if XXX
 struct cmd_find_window_data {
 	struct winlink	*wl;
 	char		*list_ctx;
@@ -137,10 +131,12 @@ cmd_find_window_match(struct cmd_find_window_list *find_list,
 	} else
 		free(find_data);
 }
+#endif
 
 static enum cmd_retval
 cmd_find_window_exec(struct cmd *self, struct cmdq_item *item)
 {
+#if XXX
 	struct args			*args = self->args;
 	struct cmd_find_state		*current = &item->shared->current;
 	struct client			*c = cmd_find_client(item, NULL, 1);
@@ -216,28 +212,6 @@ out:
 		TAILQ_REMOVE(&find_list, find_data, entry);
 		free(find_data);
 	}
+#endif
 	return (CMD_RETURN_NORMAL);
-}
-
-static void
-cmd_find_window_callback(struct window_choose_data *cdata)
-{
-	struct session		*s;
-	struct window_pane	*wp;
-
-	if (cdata == NULL)
-		return;
-
-	s = cdata->start_session;
-	if (!session_alive(s))
-		return;
-
-	wp = window_pane_at_index(cdata->wl->window, cdata->pane_id);
-	if (wp != NULL && window_pane_visible(wp))
-		window_set_active_pane(cdata->wl->window, wp);
-
-	if (session_select(s, cdata->idx) == 0) {
-		server_redraw_session(s);
-		recalculate_sizes();
-	}
 }

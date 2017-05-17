@@ -415,7 +415,7 @@ window_tree_key(struct window_pane *wp, __unused struct client *c,
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
-#if 0
+#if XXX
 	switch (key) {
 	}
 #endif

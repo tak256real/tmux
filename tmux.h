@@ -2220,24 +2220,6 @@ void		 window_copy_pageup(struct window_pane *, int);
 void		 window_copy_start_drag(struct client *, struct mouse_event *);
 int		 window_copy_scroll_position(struct window_pane *);
 
-/* window-choose.c */
-extern const struct window_mode window_choose_mode;
-void		 window_choose_add(struct window_pane *,
-			 struct window_choose_data *);
-void		 window_choose_ready(struct window_pane *,
-		     u_int, void (*)(struct window_choose_data *));
-struct window_choose_data	*window_choose_data_create (int,
-		     struct client *, struct session *);
-void	window_choose_data_run(struct window_choose_data *);
-struct window_choose_data	*window_choose_add_window(struct window_pane *,
-			struct client *, struct session *, struct winlink *,
-			const char *, const char *, u_int);
-struct window_choose_data	*window_choose_add_session(struct window_pane *,
-			struct client *, struct session *, const char *,
-			const char *, u_int);
-void	window_choose_expand_all(struct window_pane *);
-void	window_choose_set_current(struct window_pane *, u_int);
-
 /* names.c */
 void	 check_window_name(struct window *);
 char	*default_window_name(struct window *);
