@@ -16,6 +16,15 @@
  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// XXX XXX
+// TODO:
+// tree mode only commands (what?)
+// find-window
+// man page
+// quick hot keys (how? 0-9 only or what?)
+// do we want to use send -X or not?
+//
+
 #include <sys/types.h>
 
 #include <ctype.h>
