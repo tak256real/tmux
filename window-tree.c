@@ -39,9 +39,7 @@ static void		 window_tree_key(struct window_pane *,
 			     struct client *, struct session *, key_code,
 			     struct mouse_event *);
 
-#define WINDOW_TREE_SESSION_DEFAULT_COMMAND "switch-client -t '%%'"
-#define WINDOW_TREE_WINDOW_DEFAULT_COMMAND  "select-window -t '%%'"
-#define WINDOW_TREE_PANE_DEFAULT_COMMAND    "select-pane -t '%%'"
+#define WINDOW_TREE_DEFAULT_COMMAND "switch-client -t '%%'"
 
 const struct window_mode window_tree_mode = {
 	.init = window_tree_init,
@@ -76,6 +74,7 @@ struct window_tree_itemdata {
 
 struct window_tree_modedata {
 	struct mode_tree_data		 *data;
+	char				 *command;
 
 	struct window_tree_itemdata	**item_list;
 	u_int				  item_size;
@@ -370,6 +369,11 @@ window_tree_init(struct window_pane *wp, __unused struct args *args)
 
 	wp->modedata = data = xcalloc(1, sizeof *data);
 
+	if (args == NULL || args->argc == 0)
+		data->command = xstrdup(WINDOW_TREE_DEFAULT_COMMAND);
+	else
+		data->command = xstrdup(args->argv[0]);
+
 	data->data = mode_tree_start(wp, window_tree_build,
 	    window_tree_draw, data, window_tree_sort_list,
 	    nitems(window_tree_sort_list), &s);
@@ -395,6 +399,7 @@ window_tree_free(struct window_pane *wp)
 		window_tree_free_item(data->item_list[i]);
 	free(data->item_list);
 
+	free(data->command);
 	free(data);
 }
 
@@ -407,11 +412,16 @@ window_tree_resize(struct window_pane *wp, u_int sx, u_int sy)
 }
 
 static void
-window_tree_key(struct window_pane *wp, __unused struct client *c,
+window_tree_key(struct window_pane *wp, struct client *c,
     __unused struct session *s, key_code key, struct mouse_event *m)
 {
 	struct window_tree_modedata	*data = wp->modedata;
+	struct window_tree_itemdata	*item;
+	char				*command, *name;
 	int				 finished;
+	struct session			*sp;
+	struct winlink			*wlp;
+	struct window_pane		*wpp;
 
 	/*
 	 * t = toggle tag
@@ -420,14 +430,41 @@ window_tree_key(struct window_pane *wp, __unused struct client *c,
 	 * q = exit
 	 * O = change sort order
 	 *
-	 * XXX
+	 * ENTER = select item
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
-#if XXX
 	switch (key) {
+	case '\r':
+		item = mode_tree_get_current(data->data);
+		command = xstrdup(data->command);
+		window_tree_pull_item(item, &sp, &wlp, &wpp);
+		name = NULL;
+		switch (item->type) {
+		case WINDOW_TREE_SESSION:
+			if (sp == NULL)
+				break;
+			xasprintf(&name, "=%s:", sp->name);
+			break;
+		case WINDOW_TREE_WINDOW:
+			if (sp == NULL || wlp == NULL)
+				break;
+			xasprintf(&name, "=%s:%u.", sp->name, wlp->idx);
+			break;
+		case WINDOW_TREE_PANE:
+			if (sp == NULL || wlp == NULL || wpp == NULL)
+				break;
+			xasprintf(&name, "=%s:%u.%%%u", sp->name, wlp->idx,
+			    wpp->id);
+			break;
+		}
+		window_pane_reset_mode(wp);
+		if (name != NULL)
+			mode_tree_run_command(c, command, name);
+		free(name);
+		free(command);
+		return;
 	}
-#endif
 	if (finished)
 		window_pane_reset_mode(wp);
 	else {
