@@ -72,18 +72,34 @@ struct mode_tree_line {
 };
 
 static struct mode_tree_item *
-mode_tree_find_tag(struct mode_tree_list *mtl, uint64_t tag)
+mode_tree_find_item(struct mode_tree_list *mtl, uint64_t tag)
 {
 	struct mode_tree_item	*mti, *child;
 
-	TAILQ_FOREACH (mti, mtl, entry) {
+	TAILQ_FOREACH(mti, mtl, entry) {
 		if (mti->tag == tag)
 			return (mti);
-		child = mode_tree_find_tag(&mti->children, tag);
+		child = mode_tree_find_item(&mti->children, tag);
 		if (child != NULL)
 			return (child);
 	}
 	return (NULL);
+}
+
+static void
+mode_tree_free_items(struct mode_tree_list *mtl)
+{
+	struct mode_tree_item	*mti, *mti1;
+
+	TAILQ_FOREACH_SAFE(mti, mtl, entry, mti1) {
+		mode_tree_free_items(&mti->children);
+
+		free((void *)mti->name);
+		free((void *)mti->text);
+
+		TAILQ_REMOVE(mtl, mti, entry);
+		free(mti);
+	}
 }
 
 static void
@@ -101,7 +117,7 @@ mode_tree_build_lines(struct mode_tree_data *mtd,
 	struct mode_tree_item	*mti;
 	struct mode_tree_line	*line;
 
-	TAILQ_FOREACH (mti, mtl, entry) {
+	TAILQ_FOREACH(mti, mtl, entry) {
 		mtd->line_list = xreallocarray(mtd->line_list,
 		    mtd->line_size + 1, sizeof *mtd->line_list);
 
@@ -197,7 +213,7 @@ mode_tree_build(struct mode_tree_data *mtd)
 
 	//XXX check current line. by tag?
 
-	//XXX free saved
+	mode_tree_free_items(&mtd->saved);
 	TAILQ_INIT(&mtd->saved);
 
 	mode_tree_clear_lines(mtd);
@@ -216,7 +232,10 @@ mode_tree_build(struct mode_tree_data *mtd)
 void
 mode_tree_free(struct mode_tree_data *mtd)
 {
-	//XXX
+	mode_tree_free_items(&mtd->children);
+	mode_tree_clear_lines(mtd);
+	screen_free(&mtd->screen);
+	free(mtd);
 }
 
 void
@@ -245,7 +264,7 @@ mode_tree_add(struct mode_tree_data *mtd, struct mode_tree_item *parent,
 	mti->name = xstrdup(name);
 	mti->text = xstrdup(text);
 
-	saved = mode_tree_find_tag(&mtd->saved, tag);
+	saved = mode_tree_find_item(&mtd->saved, tag);
 	if (saved != NULL)
 		mti->expanded = saved->expanded;
 
