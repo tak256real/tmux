@@ -271,11 +271,12 @@ window_client_do_detach(void* modedata, void *itemdata, key_code key)
 }
 
 static void
-window_client_key(struct window_pane *wp, __unused struct client *c,
+window_client_key(struct window_pane *wp, struct client *c,
     __unused struct session *s, key_code key, struct mouse_event *m)
 {
 	struct window_client_modedata	*data = wp->modedata;
 	struct window_client_itemdata	*item;
+	char				*command, *name;
 	int				 finished;
 
 	/*
@@ -309,16 +310,15 @@ window_client_key(struct window_pane *wp, __unused struct client *c,
 		mode_tree_each_tagged(data->data, window_client_do_detach, key);
 		mode_tree_build(data->data);
 		break;
-#if 0
 	case '\r':
+		item = mode_tree_get_current(data->data);
 		command = xstrdup(data->command);
-		name = xstrdup(data->current->c->ttyname);
+		name = xstrdup(item->c->ttyname);
 		window_pane_reset_mode(wp);
-		window_client_run_command(c, command, name);
+		mode_tree_run_command(c, command, name);
 		free(name);
 		free(command);
 		return;
-#endif
 	}
 	if (finished || server_client_how_many() == 0)
 		window_pane_reset_mode(wp);

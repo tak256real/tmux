@@ -2195,6 +2195,7 @@ struct mode_tree_item *mode_tree_add(struct mode_tree_data *,
 void	 mode_tree_draw(struct mode_tree_data *);
 int	 mode_tree_key(struct mode_tree_data *, key_code *,
 	     struct mouse_event *);
+void	 mode_tree_run_command(struct client *, const char *, const char *);
 
 /* window-buffer.c */
 extern const struct window_mode window_buffer_mode;

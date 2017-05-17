@@ -552,3 +552,30 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 	}
 	return (0);
 }
+
+void
+mode_tree_run_command(struct client *c, const char *template, const char *name)
+{
+	struct cmdq_item	*new_item;
+	struct cmd_list		*cmdlist;
+	char			*command, *cause;
+
+	command = cmd_template_replace(template, name, 1);
+	if (command == NULL || *command == '\0')
+		return;
+
+	cmdlist = cmd_string_parse(command, NULL, 0, &cause);
+	if (cmdlist == NULL) {
+		if (cause != NULL && c != NULL) {
+			*cause = toupper((u_char)*cause);
+			status_message_set(c, "%s", cause);
+		}
+		free(cause);
+	} else {
+		new_item = cmdq_get_command(cmdlist, NULL, NULL, 0);
+		cmdq_append(c, new_item);
+		cmd_list_free(cmdlist);
+	}
+
+	free (command);
+}

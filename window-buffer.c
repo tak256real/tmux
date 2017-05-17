@@ -289,11 +289,12 @@ window_buffer_do_delete(void* modedata, void *itemdata, __unused key_code key)
 }
 
 static void
-window_buffer_key(struct window_pane *wp, __unused struct client *c,
+window_buffer_key(struct window_pane *wp, struct client *c,
     __unused struct session *s, key_code key, struct mouse_event *m)
 {
 	struct window_buffer_modedata	*data = wp->modedata;
-	struct window_client_itemdata	*item;
+	struct window_buffer_itemdata	*item;
+	char				*command, *name;
 	int				 finished;
 
 	/*
@@ -319,16 +320,15 @@ window_buffer_key(struct window_pane *wp, __unused struct client *c,
 		mode_tree_each_tagged(data->data, window_buffer_do_delete, key);
 		mode_tree_build(data->data);
 		break;
-#if 0
 	case '\r':
+		item = mode_tree_get_current(data->data);
 		command = xstrdup(data->command);
-		name = xstrdup(data->current->name);
+		name = xstrdup(item->name);
 		window_pane_reset_mode(wp);
-		window_buffer_run_command(c, command, name);
+		mode_tree_run_command(c, command, name);
 		free(name);
 		free(command);
 		return;
-#endif
 	}
 	if (finished || paste_get_top(NULL) == NULL)
 		window_pane_reset_mode(wp);
