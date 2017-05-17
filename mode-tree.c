@@ -442,12 +442,22 @@ mode_tree_draw(struct mode_tree_data *mtd)
 		    mti->name, tag, mti->text);
 		free(start);
 
+		if (mti->tagged) {
+			gc.attr ^= GRID_ATTR_BRIGHT;
+			gc0.attr ^= GRID_ATTR_BRIGHT;
+		}
+
 		if (i != mtd->current) {
 			screen_write_puts(&ctx, &gc0, "%.*s", w, text);
 			screen_write_clearendofline(&ctx, 8);
 		} else
 			screen_write_puts(&ctx, &gc, "%-*.*s", w, w, text);
 		free(text);
+
+		if (mti->tagged) {
+			gc.attr ^= GRID_ATTR_BRIGHT;
+			gc0.attr ^= GRID_ATTR_BRIGHT;
+		}
 	}
 
 	sy = screen_size_y(s);
