@@ -205,19 +205,35 @@ void
 mode_tree_build(struct mode_tree_data *mtd)
 {
 	struct screen	*s = &mtd->screen;
+	uint64_t	 tag;
+	u_int		 i;
 
-	memcpy(&mtd->saved, &mtd->children, sizeof mtd->saved);
+	if (mtd->line_list != NULL)
+		tag = mtd->line_list[mtd->current].item->tag;
+	else
+		tag = 0;
+
+	TAILQ_CONCAT(&mtd->saved, &mtd->children, entry);
 	TAILQ_INIT(&mtd->children);
 
 	mtd->buildcb(mtd->modedata, mtd->sort_type);
-
-	//XXX check current line. by tag?
 
 	mode_tree_free_items(&mtd->saved);
 	TAILQ_INIT(&mtd->saved);
 
 	mode_tree_clear_lines(mtd);
 	mode_tree_build_lines(mtd, &mtd->children);
+
+	for (i = 0; i < mtd->line_size; i++) {
+		if (mtd->line_list[mtd->current].item->tag == tag)
+			break;
+	}
+	if (i != mtd->line_size)
+		mtd->current = i;
+	else {
+		mtd->current = 0;
+		mtd->offset = 0;
+	}
 
 	mtd->width = screen_size_x(s);
 	mtd->height = (screen_size_y(s) / 3) * 2;

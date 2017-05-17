@@ -274,13 +274,14 @@ window_buffer_key(struct window_pane *wp, __unused struct client *c,
 	int				 finished;
 
 	/*
-	 * t = toggle buffer tag
-	 * T = tag no buffers
-	 * C-t = tag all buffers
-	 * d = delete buffer
-	 * D = delete tagged buffers
+	 * t = toggle tag
+	 * T = tag none
+	 * C-t = tag all
 	 * q = exit
 	 * O = change sort order
+	 *
+	 * d = delete buffer
+	 * D = delete tagged buffers
 	 * ENTER = paste buffer
 	 */
 

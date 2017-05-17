@@ -251,15 +251,16 @@ window_client_key(struct window_pane *wp, __unused struct client *c,
 	int				 finished;
 
 	/*
-	 * t = toggle client tag
-	 * T = tag no clients
-	 * C-t = tag all clients
+	 * t = toggle tag
+	 * T = tag none
+	 * C-t = tag all
+	 * q = exit
+	 * O = change sort order
+	 *
 	 * d = detach client
 	 * D = detach tagged clients
 	 * x = detach and kill client
 	 * X = detach and kill tagged clients
-	 * q = exit
-	 * O = change sort order
 	 * ENTER = detach client
 	 */
 
