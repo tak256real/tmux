@@ -65,10 +65,10 @@ struct window_tree_itemdata {
 };
 
 struct window_tree_modedata {
-	struct mode_tree_data		*data;
+	struct mode_tree_data		 *data;
 
-	struct window_tree_itemdata	*item_list;
-	u_int				 item_size;
+	struct window_tree_itemdata	**item_list;
+	u_int				  item_size;
 };
 
 static void
@@ -106,9 +106,21 @@ window_tree_pull_item(struct window_tree_itemdata *item, struct session **sp,
 	}
 }
 
+static struct window_tree_itemdata *
+window_tree_add_item(struct window_tree_modedata *data)
+{
+	struct window_tree_itemdata	*item;
+
+	data->item_list = xreallocarray(data->item_list, data->item_size + 1,
+	    sizeof *data->item_list);
+	item = data->item_list[data->item_size++] = xcalloc(1, sizeof *item);
+	return (item);
+}
+
 static void
 window_tree_free_item(struct window_tree_itemdata *item)
 {
+	free(item);
 }
 
 static void
@@ -124,23 +136,25 @@ window_tree_build(void *modedata, u_int sort_type)
 	u_int				 i, n;
 
 	for (i = 0; i < data->item_size; i++)
-		window_tree_free_item(&data->item_list[i]);
+		window_tree_free_item(data->item_list[i]);
 	free(data->item_list);
 	data->item_list = NULL;
 	data->item_size = 0;
 
 	/* XXX sort */
 	RB_FOREACH(s, sessions, &sessions) {
-		data->item_list = xreallocarray(data->item_list,
-		    data->item_size + 1, sizeof *data->item_list);
-		item = &data->item_list[data->item_size++];
-
+		item = window_tree_add_item(data);
 		item->type = WINDOW_TREE_SESSION;
 		item->session = s->id;
 		item->winlink = -1;
 		item->pane = -1;
 
-		text = xstrdup("XXX SESSION"); //XXX
+		text = format_single(NULL,
+		    "#{session_windows} windows"
+		    "#{?session_grouped, (group ,}"
+		    "#{session_group}#{?session_grouped,),}"
+		    "#{?session_attached, (attached),}",
+		    NULL, s, NULL, NULL);
 
 		mti = mode_tree_add(data->data, NULL, item, (uint64_t)s,
 		    s->name, text);
@@ -148,17 +162,17 @@ window_tree_build(void *modedata, u_int sort_type)
 		free(text);
 
 		RB_FOREACH(wl, winlinks, &s->windows) {
-			data->item_list = xreallocarray(data->item_list,
-			    data->item_size + 1, sizeof *data->item_list);
-			item = &data->item_list[data->item_size++];
-
+			item = window_tree_add_item(data);
 			item->type = WINDOW_TREE_WINDOW;
 			item->session = s->id;
 			item->winlink = wl->idx;
 			item->pane = -1;
 
-			xasprintf(&name, "%u:%s", wl->idx, wl->window->name);
-			text = xstrdup("XXX WINDOW"); //XXX
+			text = format_single(NULL,
+			    "#{window_name}#{window_flags} "
+			    "(#{window_panes} panes)",
+			    NULL, s, wl, NULL);
+			xasprintf(&name, "%u", wl->idx);
 
 			mti2 = mode_tree_add(data->data, mti, item,
 			    (uint64_t)wl, name, text);
@@ -166,23 +180,18 @@ window_tree_build(void *modedata, u_int sort_type)
 			free(text);
 			free(name);
 
-			if (window_count_panes(wl->window) == 1)
-				continue;
-
 			n = 0;
 			TAILQ_FOREACH(wp, &wl->window->panes, entry) {
-				data->item_list = xreallocarray(data->item_list,
-				    data->item_size + 1,
-				    sizeof *data->item_list);
-				item = &data->item_list[data->item_size++];
-
+				item = window_tree_add_item(data);
 				item->type = WINDOW_TREE_PANE;
 				item->session = s->id;
 				item->winlink = wl->idx;
 				item->pane = wp->id;
 
+				text = format_single(NULL,
+				    "#{pane_tty} \"#{pane_title}\"",
+				    NULL, s, wl, wp);
 				xasprintf(&name, "%u", n);
-				text = xstrdup("XXX PANE"); //XXX
 
 				mode_tree_add(data->data, mti2, item,
 				    (uint64_t)wp, name, text);
@@ -250,7 +259,7 @@ window_tree_free(struct window_pane *wp)
 	mode_tree_free(data->data);
 
 	for (i = 0; i < data->item_size; i++)
-		window_tree_free_item(&data->item_list[i]);
+		window_tree_free_item(data->item_list[i]);
 	free(data->item_list);
 
 	free(data);

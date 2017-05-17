@@ -59,37 +59,49 @@ struct window_client_itemdata {
 };
 
 struct window_client_modedata {
-	struct mode_tree_data		*data;
-	char				*command;
+	struct mode_tree_data		 *data;
+	char				 *command;
 
-	struct window_client_itemdata	*item_list;
-	u_int				 item_size;
+	struct window_client_itemdata	**item_list;
+	u_int				  item_size;
 };
+
+static struct window_client_itemdata *
+window_client_add_item(struct window_client_modedata *data)
+{
+	struct window_client_itemdata	*item;
+
+	data->item_list = xreallocarray(data->item_list, data->item_size + 1,
+	    sizeof *data->item_list);
+	item = data->item_list[data->item_size++] = xcalloc(1, sizeof *item);
+	return (item);
+}
 
 static void
 window_client_free_item(struct window_client_itemdata *item)
 {
 	server_client_unref(item->c);
+	free(item);
 }
 
 static int
 window_client_compare_name(const void *a0, const void *b0)
 {
-	const struct window_client_itemdata	*a = a0;
-	const struct window_client_itemdata	*b = b0;
+	const struct window_client_itemdata *const *a = a0;
+	const struct window_client_itemdata *const *b = b0;
 
-	return (strcmp(a->c->name, b->c->name));
+	return (strcmp((*a)->c->name, (*b)->c->name));
 }
 
 static int
 window_client_compare_creation_time(const void *a0, const void *b0)
 {
-	const struct window_client_itemdata	*a = a0;
-	const struct window_client_itemdata	*b = b0;
+	const struct window_client_itemdata *const *a = a0;
+	const struct window_client_itemdata *const *b = b0;
 
-	if (timercmp(&a->c->creation_time, &b->c->creation_time, >))
+	if (timercmp(&(*a)->c->creation_time, &(*b)->c->creation_time, >))
 		return (-1);
-	if (timercmp(&a->c->creation_time, &b->c->creation_time, <))
+	if (timercmp(&(*a)->c->creation_time, &(*b)->c->creation_time, <))
 		return (1);
 	return (0);
 }
@@ -97,12 +109,12 @@ window_client_compare_creation_time(const void *a0, const void *b0)
 static int
 window_client_compare_activity_time(const void *a0, const void *b0)
 {
-	const struct window_client_itemdata	*a = a0;
-	const struct window_client_itemdata	*b = b0;
+	const struct window_client_itemdata *const *a = a0;
+	const struct window_client_itemdata *const *b = b0;
 
-	if (timercmp(&a->c->activity_time, &b->c->activity_time, >))
+	if (timercmp(&(*a)->c->activity_time, &(*b)->c->activity_time, >))
 		return (-1);
-	if (timercmp(&a->c->activity_time, &b->c->activity_time, <))
+	if (timercmp(&(*a)->c->activity_time, &(*b)->c->activity_time, <))
 		return (1);
 	return (0);
 }
@@ -118,7 +130,7 @@ window_client_build(void *modedata, u_int sort_type)
 	char				*text;
 
 	for (i = 0; i < data->item_size; i++)
-		window_client_free_item(&data->item_list[i]);
+		window_client_free_item(data->item_list[i]);
 	free(data->item_list);
 	data->item_list = NULL;
 	data->item_size = 0;
@@ -127,11 +139,9 @@ window_client_build(void *modedata, u_int sort_type)
 		if (c->session == NULL || (c->flags & (CLIENT_DETACHING)))
 			continue;
 
-		data->item_list = xreallocarray(data->item_list,
-		    data->item_size + 1, sizeof *data->item_list);
-		item = &data->item_list[data->item_size++];
-
+		item = window_client_add_item(data);
 		item->c = c;
+
 		c->references++;
 	}
 
@@ -151,7 +161,7 @@ window_client_build(void *modedata, u_int sort_type)
 	}
 
 	for (i = 0; i < data->item_size; i++) {
-		item = &data->item_list[i];
+		item = data->item_list[i];
 		c = item->c;
 
 		tim = ctime(&c->activity_time.tv_sec);
@@ -229,7 +239,7 @@ window_client_free(struct window_pane *wp)
 	mode_tree_free(data->data);
 
 	for (i = 0; i < data->item_size; i++)
-		window_client_free_item(&data->item_list[i]);
+		window_client_free_item(data->item_list[i]);
 	free(data->item_list);
 
 	free(data->command);

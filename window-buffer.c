@@ -62,52 +62,64 @@ struct window_buffer_itemdata {
 };
 
 struct window_buffer_modedata {
-	struct mode_tree_data		*data;
-	char				*command;
+	struct mode_tree_data		 *data;
+	char				 *command;
 
-	struct window_buffer_itemdata	*item_list;
-	u_int				 item_size;
+	struct window_buffer_itemdata	**item_list;
+	u_int				  item_size;
 };
+
+static struct window_buffer_itemdata *
+window_buffer_add_item(struct window_buffer_modedata *data)
+{
+	struct window_buffer_itemdata	*item;
+
+	data->item_list = xreallocarray(data->item_list, data->item_size + 1,
+	    sizeof *data->item_list);
+	item = data->item_list[data->item_size++] = xcalloc(1, sizeof *item);
+	return (item);
+}
 
 static void
 window_buffer_free_item(struct window_buffer_itemdata *item)
 {
 	free((void *)item->name);
+	free(item);
 }
 
 static int
 window_buffer_compare_name(const void *a0, const void *b0)
 {
-	const struct window_buffer_itemdata	*a = a0;
-	const struct window_buffer_itemdata	*b = b0;
+	const struct window_buffer_itemdata *const *a = a0;
+	const struct window_buffer_itemdata *const *b = b0;
 
-	return (strcmp(a->name, b->name));
+	return (strcmp((*a)->name, (*b)->name));
 }
 
 static int
 window_buffer_compare_time(const void *a0, const void *b0)
 {
-	const struct window_buffer_itemdata	*a = a0;
-	const struct window_buffer_itemdata	*b = b0;
+	const struct window_buffer_itemdata *const *a = a0;
+	const struct window_buffer_itemdata *const *b = b0;
 
-	if (a->order > b->order)
+	if ((*a)->order > (*b)->order)
 		return (-1);
-	if (a->order < b->order)
+	if ((*a)->order < (*b)->order)
 		return (1);
-	return (strcmp(a->name, b->name));
+	return (strcmp((*a)->name, (*b)->name));
 }
 
 static int
 window_buffer_compare_size(const void *a0, const void *b0)
 {
-	const struct window_buffer_itemdata	*a = a0;
-	const struct window_buffer_itemdata	*b = b0;
+	const struct window_buffer_itemdata *const *a = a0;
+	const struct window_buffer_itemdata *const *b = b0;
 
-	if (a->size > b->size)
+	if ((*a)->size > (*b)->size)
 		return (-1);
-	if (a->size < b->size)
+	if ((*a)->size < (*b)->size)
 		return (1);
-	return (strcmp(a->name, b->name));
+	return (strcmp((*a)->name, (*b)->name));
 }
 
 static void
@@ -121,17 +133,14 @@ window_buffer_build(void *modedata, u_int sort_type)
 	char				*text;
 
 	for (i = 0; i < data->item_size; i++)
-		window_buffer_free_item(&data->item_list[i]);
+		window_buffer_free_item(data->item_list[i]);
 	free(data->item_list);
 	data->item_list = NULL;
 	data->item_size = 0;
 
 	pb = NULL;
 	while ((pb = paste_walk(pb)) != NULL) {
-		data->item_list = xreallocarray(data->item_list,
-		    data->item_size + 1, sizeof *data->item_list);
-		item = &data->item_list[data->item_size++];
-
+		item = window_buffer_add_item(data);
 		item->name = xstrdup(paste_buffer_name(pb));
 		item->created = paste_buffer_created(pb);
 		paste_buffer_data(pb, &item->size);
@@ -154,7 +163,7 @@ window_buffer_build(void *modedata, u_int sort_type)
 	}
 
 	for (i = 0; i < data->item_size; i++) {
-		item = &data->item_list[i];
+		item = data->item_list[i];
 
 		tim = ctime(&item->created);
 		*strchr(tim, '\n') = '\0';
@@ -251,7 +260,7 @@ window_buffer_free(struct window_pane *wp)
 	mode_tree_free(data->data);
 
 	for (i = 0; i < data->item_size; i++)
-		window_buffer_free_item(&data->item_list[i]);
+		window_buffer_free_item(data->item_list[i]);
 	free(data->item_list);
 
 	free(data->command);
