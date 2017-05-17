@@ -88,7 +88,7 @@ window_buffer_free_item(struct window_buffer_itemdata *item)
 }
 
 static int
-window_buffer_compare_name(const void *a0, const void *b0)
+window_buffer_cmp_name(const void *a0, const void *b0)
 {
 	const struct window_buffer_itemdata *const *a = a0;
 	const struct window_buffer_itemdata *const *b = b0;
@@ -97,7 +97,7 @@ window_buffer_compare_name(const void *a0, const void *b0)
 }
 
 static int
-window_buffer_compare_time(const void *a0, const void *b0)
+window_buffer_cmp_time(const void *a0, const void *b0)
 {
 	const struct window_buffer_itemdata *const *a = a0;
 	const struct window_buffer_itemdata *const *b = b0;
@@ -110,7 +110,7 @@ window_buffer_compare_time(const void *a0, const void *b0)
 }
 
 static int
-window_buffer_compare_size(const void *a0, const void *b0)
+window_buffer_cmp_size(const void *a0, const void *b0)
 {
 	const struct window_buffer_itemdata *const *a = a0;
 	const struct window_buffer_itemdata *const *b = b0;
@@ -150,15 +150,15 @@ window_buffer_build(void *modedata, u_int sort_type)
 	switch (sort_type) {
 	case WINDOW_BUFFER_BY_NAME:
 		qsort(data->item_list, data->item_size, sizeof *data->item_list,
-		    window_buffer_compare_name);
+		    window_buffer_cmp_name);
 		break;
 	case WINDOW_BUFFER_BY_TIME:
 		qsort(data->item_list, data->item_size, sizeof *data->item_list,
-		    window_buffer_compare_time);
+		    window_buffer_cmp_time);
 		break;
 	case WINDOW_BUFFER_BY_SIZE:
 		qsort(data->item_list, data->item_size, sizeof *data->item_list,
-		    window_buffer_compare_size);
+		    window_buffer_cmp_size);
 		break;
 	}
 

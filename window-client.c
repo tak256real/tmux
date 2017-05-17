@@ -85,7 +85,7 @@ window_client_free_item(struct window_client_itemdata *item)
 }
 
 static int
-window_client_compare_name(const void *a0, const void *b0)
+window_client_cmp_name(const void *a0, const void *b0)
 {
 	const struct window_client_itemdata *const *a = a0;
 	const struct window_client_itemdata *const *b = b0;
@@ -94,7 +94,7 @@ window_client_compare_name(const void *a0, const void *b0)
 }
 
 static int
-window_client_compare_creation_time(const void *a0, const void *b0)
+window_client_cmp_creation_time(const void *a0, const void *b0)
 {
 	const struct window_client_itemdata *const *a = a0;
 	const struct window_client_itemdata *const *b = b0;
@@ -107,7 +107,7 @@ window_client_compare_creation_time(const void *a0, const void *b0)
 }
 
 static int
-window_client_compare_activity_time(const void *a0, const void *b0)
+window_client_cmp_activity_time(const void *a0, const void *b0)
 {
 	const struct window_client_itemdata *const *a = a0;
 	const struct window_client_itemdata *const *b = b0;
@@ -148,15 +148,15 @@ window_client_build(void *modedata, u_int sort_type)
 	switch (sort_type) {
 	case WINDOW_CLIENT_BY_NAME:
 		qsort(data->item_list, data->item_size, sizeof *data->item_list,
-		    window_client_compare_name);
+		    window_client_cmp_name);
 		break;
 	case WINDOW_CLIENT_BY_CREATION_TIME:
 		qsort(data->item_list, data->item_size, sizeof *data->item_list,
-		    window_client_compare_creation_time);
+		    window_client_cmp_creation_time);
 		break;
 	case WINDOW_CLIENT_BY_ACTIVITY_TIME:
 		qsort(data->item_list, data->item_size, sizeof *data->item_list,
-		    window_client_compare_activity_time);
+		    window_client_cmp_activity_time);
 		break;
 	}
 
