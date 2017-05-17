@@ -18,6 +18,7 @@
 
 #include <sys/types.h>
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -340,9 +341,10 @@ mode_tree_draw(struct mode_tree_data *mtd)
 	struct screen_write_ctx	 ctx;
 	struct grid_cell	 gc0, gc;
 	u_int			 w, h, i, j, sy, box_x, box_y;
-	char			*text, *start;
+	char			*text, *start, key[7];
 	const char		*tag, *symbol;
 	size_t			 size;
+	int			 keylen;
 
 	memcpy(&gc0, &grid_default_cell, sizeof gc0);
 	memcpy(&gc, &grid_default_cell, sizeof gc);
@@ -354,6 +356,11 @@ mode_tree_draw(struct mode_tree_data *mtd)
 	screen_write_start(&ctx, NULL, s);
 	screen_write_clearscreen(&ctx, 8);
 
+	if (mtd->line_size > 10)
+		keylen = 6;
+	else
+		keylen = 4;
+
 	for (i = 0; i < mtd->line_size; i++) {
 		if (i < mtd->offset)
 			continue;
@@ -364,6 +371,13 @@ mode_tree_draw(struct mode_tree_data *mtd)
 		mti = line->item;
 
 		screen_write_cursormove(&ctx, 0, i - mtd->offset);
+
+		if (i < 10)
+			snprintf(key, sizeof key, "(%c)", '0' + i);
+		else if (i < 36)
+			snprintf(key, sizeof key, "(M-%c)", 'a' + (i - 10));
+		else
+			*key = '\0';
 
 		if (line->flat)
 			symbol = "";
@@ -398,8 +412,8 @@ mode_tree_draw(struct mode_tree_data *mtd)
 			tag = "*";
 		else
 			tag = "";
-		xasprintf(&text, "%s%s%s: %s", start, mti->name, tag,
-		    mti->text);
+		xasprintf(&text, "%-*s%s%s%s: %s", keylen, key, start,
+		    mti->name, tag, mti->text);
 		free(start);
 
 		if (i != mtd->current) {
@@ -450,6 +464,8 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 	struct mode_tree_line	*line;
 	struct mode_tree_item	*current;
 	u_int			 i, x, y;
+	int			 choice;
+	key_code		 tmp;
 
 	if (*key == KEYC_MOUSEDOWN1_PANE) {
 		if (cmd_mouse_at(mtd->wp, m, &x, &y, 0) != 0) {
@@ -469,6 +485,24 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 
 	line = &mtd->line_list[mtd->current];
 	current = line->item;
+
+	choice = -1;
+	if (*key >= '0' && *key <= '9')
+		choice = (*key) - '0';
+	else if (((*key) & KEYC_MASK_MOD) == KEYC_ESCAPE) {
+		tmp = (*key) & KEYC_MASK_KEY;
+		if (tmp >= 'a' && tmp <= 'z')
+			choice = 10 + (tmp - 'a');
+	}
+	if (choice != -1) {
+		if ((u_int)choice > mtd->line_size - 1) {
+			*key = KEYC_NONE;
+			return (0);
+		}
+		mtd->current = choice;
+		*key = '\r';
+		return (0);
+	}
 
 	switch (*key) {
 	case 'q':

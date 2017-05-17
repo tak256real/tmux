@@ -21,7 +21,6 @@
 // tree mode only commands (what?)
 // find-window
 // man page
-// quick hot keys (how? 0-9 only or what?)
 // do we want to use send -X or not?
 //
 
