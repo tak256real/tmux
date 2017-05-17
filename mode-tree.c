@@ -454,16 +454,16 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 	if (*key == KEYC_MOUSEDOWN1_PANE) {
 		if (cmd_mouse_at(mtd->wp, m, &x, &y, 0) != 0) {
 			*key = KEYC_NONE;
-			return 0;
+			return (0);
 		}
 		if (x > mtd->width || y > mtd->height) {
 			*key = KEYC_NONE;
-			return 0;
+			return (0);
 		}
 		if (mtd->offset + y < mtd->line_size) {
 			mtd->current = mtd->offset + y;
 			*key = '\r';
-			return 0;
+			return (0);
 		}
 	}
 
@@ -473,7 +473,7 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 	switch (*key) {
 	case 'q':
 	case '\033': /* Escape */
-		return 1;
+		return (1);
 	case KEYC_UP:
 	case 'k':
 	case KEYC_WHEELUP_PANE:
