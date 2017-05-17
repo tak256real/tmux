@@ -151,6 +151,17 @@ mode_tree_build_lines(struct mode_tree_data *mtd,
 	}
 }
 
+static void
+mode_tree_clear_tagged(struct mode_tree_list *mtl)
+{
+	struct mode_tree_item	*mti;
+
+	TAILQ_FOREACH(mti, mtl, entry) {
+		mti->tagged = 0;
+		mode_tree_clear_tagged(&mti->children);
+	}
+}
+
 void
 mode_tree_up(struct mode_tree_data *mtd, int wrap)
 {
@@ -186,6 +197,21 @@ void *
 mode_tree_get_current(struct mode_tree_data *mtd)
 {
 	return (mtd->line_list[mtd->current].item->itemdata);
+}
+
+u_int
+mode_tree_count_tagged(struct mode_tree_data *mtd)
+{
+	struct mode_tree_item	*mti;
+	u_int			 i, tagged;
+
+	tagged = 0;
+	for (i = 0; i < mtd->line_size; i++) {
+		mti = mtd->line_list[i].item;
+		if (mti->tagged)
+			tagged++;
+	}
+	return (tagged);
 }
 
 void
@@ -462,7 +488,7 @@ int
 mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 {
 	struct mode_tree_line	*line;
-	struct mode_tree_item	*current;
+	struct mode_tree_item	*current, *parent;
 	u_int			 i, x, y;
 	int			 choice;
 	key_code		 tmp;
@@ -546,16 +572,32 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 			mtd->offset = 0;
 		break;
 	case 't':
-		current->tagged = !current->tagged;
-		mode_tree_down(mtd, 1);
+		/*
+		 * Do not allow parents and children to both be tagged: untag
+		 * all parents and children of current.
+		 */
+		if (!current->tagged) {
+			parent = current->parent;
+			while (parent != NULL) {
+				parent->tagged = 0;
+				parent = parent->parent;
+			}
+			mode_tree_clear_tagged(&current->children);
+			current->tagged = 1;
+		} else
+			current->tagged = 0;
 		break;
 	case 'T':
 		for (i = 0; i < mtd->line_size; i++)
 			mtd->line_list[i].item->tagged = 0;
 		break;
 	case '\024': /* C-t */
-		for (i = 0; i < mtd->line_size; i++)
-			mtd->line_list[i].item->tagged = 1;
+		for (i = 0; i < mtd->line_size; i++) {
+			if (mtd->line_list[i].item->parent == NULL)
+				mtd->line_list[i].item->tagged = 1;
+			else
+				mtd->line_list[i].item->tagged = 0;
+		}
 		break;
 	case 'O':
 		mtd->sort_type++;
@@ -589,7 +631,8 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 }
 
 void
-mode_tree_run_command(struct client *c, const char *template, const char *name)
+mode_tree_run_command(struct client *c, struct cmd_find_state *fs,
+    const char *template, const char *name)
 {
 	struct cmdq_item	*new_item;
 	struct cmd_list		*cmdlist;
@@ -607,7 +650,7 @@ mode_tree_run_command(struct client *c, const char *template, const char *name)
 		}
 		free(cause);
 	} else {
-		new_item = cmdq_get_command(cmdlist, NULL, NULL, 0);
+		new_item = cmdq_get_command(cmdlist, fs, NULL, 0);
 		cmdq_append(c, new_item);
 		cmd_list_free(cmdlist);
 	}

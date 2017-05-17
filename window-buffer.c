@@ -306,7 +306,7 @@ window_buffer_key(struct window_pane *wp, struct client *c,
 	 *
 	 * d = delete buffer
 	 * D = delete tagged buffers
-	 * ENTER = paste buffer
+	 * Enter = paste buffer
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
@@ -325,7 +325,7 @@ window_buffer_key(struct window_pane *wp, struct client *c,
 		command = xstrdup(data->command);
 		name = xstrdup(item->name);
 		window_pane_reset_mode(wp);
-		mode_tree_run_command(c, command, name);
+		mode_tree_run_command(c, NULL, command, name);
 		free(name);
 		free(command);
 		return;

@@ -78,11 +78,18 @@ struct window_tree_itemdata {
 };
 
 struct window_tree_modedata {
+	struct window_pane		 *wp;
+	int				  dead;
+	int				  references;
+
 	struct mode_tree_data		 *data;
 	char				 *command;
 
 	struct window_tree_itemdata	**item_list;
 	u_int				  item_size;
+
+	struct client			 *client;
+	const char			 *entered;
 };
 
 static void
@@ -374,6 +381,9 @@ window_tree_init(struct window_pane *wp, __unused struct args *args)
 
 	wp->modedata = data = xcalloc(1, sizeof *data);
 
+	data->wp = wp;
+	data->references = 1;
+
 	if (args == NULL || args->argc == 0)
 		data->command = xstrdup(WINDOW_TREE_DEFAULT_COMMAND);
 	else
@@ -390,12 +400,11 @@ window_tree_init(struct window_pane *wp, __unused struct args *args)
 }
 
 static void
-window_tree_free(struct window_pane *wp)
+window_tree_destroy(struct window_tree_modedata *data)
 {
-	struct window_tree_modedata	*data = wp->modedata;
-	u_int				 i;
+	u_int	i;
 
-	if (data == NULL)
+	if (--data->references != 0)
 		return;
 
 	mode_tree_free(data->data);
@@ -409,11 +418,118 @@ window_tree_free(struct window_pane *wp)
 }
 
 static void
+window_tree_free(struct window_pane *wp)
+{
+	struct window_tree_modedata *data = wp->modedata;
+
+	if (data == NULL)
+		return;
+
+	data->dead = 1;
+	window_tree_destroy(data);
+}
+
+static void
 window_tree_resize(struct window_pane *wp, u_int sx, u_int sy)
 {
 	struct window_tree_modedata	*data = wp->modedata;
 
 	mode_tree_resize(data->data, sx, sy);
+}
+
+static char *
+window_tree_get_target(struct window_tree_itemdata *item,
+    struct cmd_find_state *fs)
+{
+	struct session		*s;
+	struct winlink		*wl;
+	struct window_pane	*wp;
+	char			*target;
+
+	window_tree_pull_item(item, &s, &wl, &wp);
+
+	target = NULL;
+	switch (item->type) {
+	case WINDOW_TREE_SESSION:
+		if (s == NULL)
+			break;
+		xasprintf(&target, "=%s:", s->name);
+		break;
+	case WINDOW_TREE_WINDOW:
+		if (s == NULL || wl == NULL)
+			break;
+		xasprintf(&target, "=%s:%u.", s->name, wl->idx);
+		break;
+	case WINDOW_TREE_PANE:
+		if (s == NULL || wl == NULL || wp == NULL)
+			break;
+		xasprintf(&target, "=%s:%u.%%%u", s->name, wl->idx, wp->id);
+		break;
+	}
+	if (target == NULL)
+		cmd_find_clear_state(fs, 0);
+	else
+		cmd_find_from_winlink_pane(fs, wl, wp);
+	return (target);
+}
+
+static void
+window_tree_command_each(void* modedata, void* itemdata, __unused key_code key)
+{
+	struct window_tree_modedata	*data = modedata;
+	struct window_tree_itemdata	*item = itemdata;
+	char				*name;
+	struct cmd_find_state		 fs;
+
+	name = window_tree_get_target(item, &fs);
+	if (name != NULL)
+		mode_tree_run_command(data->client, &fs, data->entered, name);
+	free(name);
+}
+
+static enum cmd_retval
+window_tree_command_done(__unused struct cmdq_item *item, void *modedata)
+{
+	struct window_tree_modedata	*data = modedata;
+
+	if (!data->dead) {
+		mode_tree_build(data->data);
+		mode_tree_draw(data->data);
+		data->wp->flags |= PANE_REDRAW;
+	}
+	window_tree_destroy(data);
+	return (CMD_RETURN_NORMAL);
+}
+
+static int
+window_tree_command_callback(struct client *c, void *modedata, const char *s,
+    __unused int done)
+{
+	struct window_tree_modedata	*data = modedata;
+
+	if (data->dead)
+		return (0);
+
+	data->client = c;
+	data->entered = s;
+
+	mode_tree_each_tagged(data->data, window_tree_command_each, KEYC_NONE);
+
+	data->client = NULL;
+	data->entered = NULL;
+
+	data->references++;
+	cmdq_append(c, cmdq_get_callback(window_tree_command_done, data));
+
+	return (0);
+}
+
+static void
+window_tree_command_free(void *modedata)
+{
+	struct window_tree_modedata	*data = modedata;
+
+	window_tree_destroy(data);
 }
 
 static void
@@ -422,11 +538,10 @@ window_tree_key(struct window_pane *wp, struct client *c,
 {
 	struct window_tree_modedata	*data = wp->modedata;
 	struct window_tree_itemdata	*item;
-	char				*command, *name;
+	char				*command, *name, *prompt;
+	struct cmd_find_state		 fs;
 	int				 finished;
-	struct session			*sp;
-	struct winlink			*wlp;
-	struct window_pane		*wpp;
+	u_int				 tagged;
 
 	/*
 	 * t = toggle tag
@@ -435,37 +550,29 @@ window_tree_key(struct window_pane *wp, struct client *c,
 	 * q = exit
 	 * O = change sort order
 	 *
-	 * ENTER = select item
+	 * Enter = select item
+	 * Space = enter command
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
 	switch (key) {
+	case ' ':
+		tagged = mode_tree_count_tagged(data->data);
+		if (tagged == 0)
+			break;
+		data->references++;
+		xasprintf(&prompt, "(%u tagged) ", tagged);
+		status_prompt_set(c, prompt, "", window_tree_command_callback,
+		    window_tree_command_free, data, 0);
+		free(prompt);
+		break;
 	case '\r':
 		item = mode_tree_get_current(data->data);
 		command = xstrdup(data->command);
-		window_tree_pull_item(item, &sp, &wlp, &wpp);
-		name = NULL;
-		switch (item->type) {
-		case WINDOW_TREE_SESSION:
-			if (sp == NULL)
-				break;
-			xasprintf(&name, "=%s:", sp->name);
-			break;
-		case WINDOW_TREE_WINDOW:
-			if (sp == NULL || wlp == NULL)
-				break;
-			xasprintf(&name, "=%s:%u.", sp->name, wlp->idx);
-			break;
-		case WINDOW_TREE_PANE:
-			if (sp == NULL || wlp == NULL || wpp == NULL)
-				break;
-			xasprintf(&name, "=%s:%u.%%%u", sp->name, wlp->idx,
-			    wpp->id);
-			break;
-		}
+		name = window_tree_get_target(item, &fs);
 		window_pane_reset_mode(wp);
 		if (name != NULL)
-			mode_tree_run_command(c, command, name);
+			mode_tree_run_command(c, &fs, command, name);
 		free(name);
 		free(command);
 		return;

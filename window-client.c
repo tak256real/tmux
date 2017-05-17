@@ -292,7 +292,7 @@ window_client_key(struct window_pane *wp, struct client *c,
 	 * X = detach and kill tagged clients
 	 * z = suspend client
 	 * Z = suspend tagged clients
-	 * ENTER = detach client
+	 * Enter = detach client
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
@@ -315,7 +315,7 @@ window_client_key(struct window_pane *wp, struct client *c,
 		command = xstrdup(data->command);
 		name = xstrdup(item->c->ttyname);
 		window_pane_reset_mode(wp);
-		mode_tree_run_command(c, command, name);
+		mode_tree_run_command(c, NULL, command, name);
 		free(name);
 		free(command);
 		return;

@@ -1288,6 +1288,8 @@ struct cmd_entry {
 };
 
 /* Client connection. */
+typedef int (*prompt_input_cb)(struct client *, void *, const char *, int);
+typedef void (*prompt_free_cb)(void *);
 struct client {
 	const char	*name;
 	struct tmuxpeer	*peer;
@@ -1357,7 +1359,8 @@ struct client {
 	struct key_table *keytable;
 
 	struct event	 identify_timer;
-	void		(*identify_callback)(struct client *, struct window_pane *);
+	void		(*identify_callback)(struct client *,
+			     struct window_pane *);
 	void		*identify_callback_data;
 
 	char		*message_string;
@@ -1368,8 +1371,8 @@ struct client {
 	char		*prompt_string;
 	struct utf8_data *prompt_buffer;
 	size_t		 prompt_index;
-	int		 (*prompt_callbackfn)(void *, const char *, int);
-	void		 (*prompt_freefn)(void *);
+	prompt_input_cb	 prompt_inputcb;
+	prompt_free_cb	 prompt_freecb;
 	void		*prompt_data;
 	u_int		 prompt_hindex;
 	enum { PROMPT_ENTRY, PROMPT_COMMAND } prompt_mode;
@@ -1894,7 +1897,7 @@ void printflike(2, 3) status_message_set(struct client *, const char *, ...);
 void	 status_message_clear(struct client *);
 int	 status_message_redraw(struct client *);
 void	 status_prompt_set(struct client *, const char *, const char *,
-	     int (*)(void *, const char *, int), void (*)(void *), void *, int);
+	     prompt_input_cb, prompt_free_cb, void *, int);
 void	 status_prompt_clear(struct client *);
 int	 status_prompt_redraw(struct client *);
 int	 status_prompt_key(struct client *, key_code);
@@ -2178,6 +2181,7 @@ u_int		 layout_set_next(struct window *);
 u_int		 layout_set_previous(struct window *);
 
 /* mode-tree.c */
+u_int	 mode_tree_count_tagged(struct mode_tree_data *);
 void	*mode_tree_get_current(struct mode_tree_data *);
 void	 mode_tree_each_tagged(struct mode_tree_data *, void (*)(void *, void *,
 	     key_code), key_code);
@@ -2195,7 +2199,8 @@ struct mode_tree_item *mode_tree_add(struct mode_tree_data *,
 void	 mode_tree_draw(struct mode_tree_data *);
 int	 mode_tree_key(struct mode_tree_data *, key_code *,
 	     struct mouse_event *);
-void	 mode_tree_run_command(struct client *, const char *, const char *);
+void	 mode_tree_run_command(struct client *, struct cmd_find_state *,
+	     const char *, const char *);
 
 /* window-buffer.c */
 extern const struct window_mode window_buffer_mode;
