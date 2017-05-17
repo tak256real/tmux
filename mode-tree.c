@@ -44,7 +44,6 @@ struct mode_tree_data {
 	u_int			  line_size;
 
 	u_int			  depth;
-	int                       flat;
 
 	u_int			  width;
 	u_int			  height;
@@ -121,12 +120,10 @@ mode_tree_build_lines(struct mode_tree_data *mtd,
 {
 	struct mode_tree_item	*mti;
 	struct mode_tree_line	*line;
-	u_int			 start;
+	u_int			 i;
 	int			 flat = 1;
 
 	mtd->depth = depth;
-
-	start = mtd->line_size;
 	TAILQ_FOREACH(mti, mtl, entry) {
 		mtd->line_list = xreallocarray(mtd->line_list,
 		    mtd->line_size + 1, sizeof *mtd->line_list);
@@ -142,8 +139,11 @@ mode_tree_build_lines(struct mode_tree_data *mtd,
 			mode_tree_build_lines(mtd, &mti->children, depth + 1);
 	}
 	TAILQ_FOREACH(mti, mtl, entry) {
-		line = &mtd->line_list[start++];
-		line->flat = flat;
+		for (i = 0; i < mtd->line_size; i++) {
+			line = &mtd->line_list[i];
+			if (line->item == mti)
+				line->flat = flat;
+		}
 	}
 }
 
@@ -233,7 +233,6 @@ mode_tree_build(struct mode_tree_data *mtd)
 	TAILQ_CONCAT(&mtd->saved, &mtd->children, entry);
 	TAILQ_INIT(&mtd->children);
 
-	mtd->flat = 1;
 	mtd->buildcb(mtd->modedata, mtd->sort_type);
 
 	mode_tree_free_items(&mtd->saved);
@@ -311,10 +310,9 @@ mode_tree_add(struct mode_tree_data *mtd, struct mode_tree_item *parent,
 
 	TAILQ_INIT (&mti->children);
 
-	if (parent != NULL) {
-		mtd->flat = 0;
+	if (parent != NULL)
 		TAILQ_INSERT_TAIL(&parent->children, mti, entry);
-	} else
+	else
 		TAILQ_INSERT_TAIL(&mtd->children, mti, entry);
 
 	return (mti);
