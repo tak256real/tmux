@@ -43,6 +43,9 @@ struct mode_tree_data {
 	struct mode_tree_line	 *line_list;
 	u_int			  line_size;
 
+	u_int			  depth;
+	int                       flat;
+
 	u_int			  width;
 	u_int			  height;
 
@@ -68,7 +71,9 @@ struct mode_tree_item {
 
 struct mode_tree_line {
 	struct mode_tree_item		*item;
-	u_int				 number;
+	u_int				 depth;
+	int				 last;
+	int				 flat;
 };
 
 static struct mode_tree_item *
@@ -112,21 +117,33 @@ mode_tree_clear_lines(struct mode_tree_data *mtd)
 
 static void
 mode_tree_build_lines(struct mode_tree_data *mtd,
-    struct mode_tree_list *mtl)
+    struct mode_tree_list *mtl, u_int depth)
 {
 	struct mode_tree_item	*mti;
 	struct mode_tree_line	*line;
+	u_int			 start;
+	int			 flat = 1;
 
+	mtd->depth = depth;
+
+	start = mtd->line_size;
 	TAILQ_FOREACH(mti, mtl, entry) {
 		mtd->line_list = xreallocarray(mtd->line_list,
 		    mtd->line_size + 1, sizeof *mtd->line_list);
 
 		line = &mtd->line_list[mtd->line_size++];
 		line->item = mti;
-		line->number = mtd->line_size - 1;
+		line->depth = depth;
+		line->last = (mti == TAILQ_LAST(mtl, mode_tree_list));
 
+		if (!TAILQ_EMPTY(&mti->children))
+			flat = 0;
 		if (mti->expanded)
-			mode_tree_build_lines(mtd, &mti->children);
+			mode_tree_build_lines(mtd, &mti->children, depth + 1);
+	}
+	TAILQ_FOREACH(mti, mtl, entry) {
+		line = &mtd->line_list[start++];
+		line->flat = flat;
 	}
 }
 
@@ -216,13 +233,14 @@ mode_tree_build(struct mode_tree_data *mtd)
 	TAILQ_CONCAT(&mtd->saved, &mtd->children, entry);
 	TAILQ_INIT(&mtd->children);
 
+	mtd->flat = 1;
 	mtd->buildcb(mtd->modedata, mtd->sort_type);
 
 	mode_tree_free_items(&mtd->saved);
 	TAILQ_INIT(&mtd->saved);
 
 	mode_tree_clear_lines(mtd);
-	mode_tree_build_lines(mtd, &mtd->children);
+	mode_tree_build_lines(mtd, &mtd->children, 0);
 
 	for (i = 0; i < mtd->line_size; i++) {
 		if (mtd->line_list[mtd->current].item->tag == tag)
@@ -273,6 +291,9 @@ mode_tree_add(struct mode_tree_data *mtd, struct mode_tree_item *parent,
 {
 	struct mode_tree_item	*mti, *saved;
 
+	log_debug("%s: %llu, %s %s", __func__, (unsigned long long)tag,
+	    name, text);
+
 	mti = xcalloc(1, sizeof *mti);
 	mti->itemdata = itemdata;
 
@@ -285,13 +306,15 @@ mode_tree_add(struct mode_tree_data *mtd, struct mode_tree_item *parent,
 		if (parent == NULL || (parent != NULL && parent->expanded))
 			mti->tagged = saved->tagged;
 		mti->expanded = saved->expanded;
-	}
+	} else
+		mti->expanded = 1;
 
 	TAILQ_INIT (&mti->children);
 
-	if (parent != NULL)
+	if (parent != NULL) {
+		mtd->flat = 0;
 		TAILQ_INSERT_TAIL(&parent->children, mti, entry);
-	else
+	} else
 		TAILQ_INSERT_TAIL(&mtd->children, mti, entry);
 
 	return (mti);
@@ -308,8 +331,9 @@ mode_tree_draw(struct mode_tree_data *mtd)
 	struct screen_write_ctx	 ctx;
 	struct grid_cell	 gc0, gc;
 	u_int			 w, h, i, sy, box_x, box_y;
-	char			*text, *tmp;
-	const char		*tag;
+	char			*text, *start, *cp;
+	const char		*tag, *symbol;
+	size_t			 size, n;
 
 	memcpy(&gc0, &grid_default_cell, sizeof gc0);
 	memcpy(&gc, &grid_default_cell, sizeof gc);
@@ -332,15 +356,38 @@ mode_tree_draw(struct mode_tree_data *mtd)
 
 		screen_write_cursormove(&ctx, 0, i - mtd->offset);
 
+		if (line->flat)
+			symbol = "";
+		else if (TAILQ_EMPTY(&mti->children))
+			symbol = "  ";
+		else if (mti->expanded)
+			symbol = "+ ";
+		else
+			symbol = "- ";
+
+		if (line->depth == 0)
+			start = xstrdup(symbol);
+		else {
+			size = (4 * line->depth) + 16;
+			start = xcalloc(1, size);
+			n = 4 * (line->depth - 1);
+			memset(start, ' ', n);
+			cp = start + n;
+
+			if (line->last)
+				strlcat(cp, "\001mq\001> ", size);
+			else
+				strlcat(cp, "\001tq\001> ", size);
+			strlcat(cp, symbol, size);
+		}
+
 		if (mti->tagged)
 			tag = "*";
 		else
 			tag = "";
-		xasprintf(&tmp, "%s%s:", mti->name, tag);
-		xasprintf(&text, "%-16s%s", tmp, mti->text);
-		free(tmp);
-
-		//XXX children, expanded etc
+		xasprintf(&text, "%s%s%s: %s", start, mti->name, tag,
+		    mti->text);
+		free(start);
 
 		if (i != mtd->current) {
 			screen_write_puts(&ctx, &gc0, "%.*s", w, text);
@@ -377,9 +424,10 @@ mode_tree_draw(struct mode_tree_data *mtd)
 	if (box != NULL) {
 		screen_write_cursormove(&ctx, 2, h + 1);
 		screen_write_copy(&ctx, box, 0, 0, box_x, box_y, NULL, NULL);
+
+		screen_free(box);
 	}
 
-	screen_free(box);
 	screen_write_stop(&ctx);
 }
 
@@ -465,6 +513,34 @@ mode_tree_key(struct mode_tree_data *mtd, key_code *key, struct mouse_event *m)
 			mtd->sort_type = 0;
 		mode_tree_build(mtd);
 		break;
+#if 0
+	case KEYC_LEFT:
+	case '-':
+		item = data->current;
+		if (item->type == WINDOW_CHOOSE2_SESSION && !item->expanded) {
+			if (data->current->number != 0)
+				window_choose2_up(data);
+			break;
+		}
+		if (item->type == WINDOW_CHOOSE2_WINDOW && !item->expanded)
+			item = item->parent;
+		else if (item->type == WINDOW_CHOOSE2_PANE)
+			item = item->parent;
+		item->expanded = 0;
+		data->current = item;
+		window_choose2_build_tree(data);
+		break;
+	case KEYC_RIGHT:
+	case '+':
+		item = data->current;
+		if (item->type == WINDOW_CHOOSE2_PANE)
+			item = item->parent;
+		item->expanded = 1;
+		window_choose2_build_tree(data);
+		if (data->current->number != data->number - 1)
+			window_choose2_down(data);
+		break;
+#endif
 	}
 	return (0);
 }

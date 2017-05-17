@@ -61,7 +61,6 @@ struct window_buffer_itemdata {
 	size_t		 size;
 };
 
-
 struct window_buffer_modedata {
 	struct mode_tree_data		*data;
 	char				*command;
@@ -213,6 +212,7 @@ window_buffer_draw(__unused void *modedata, void *itemdata, u_int sx, u_int sy)
 		end++;
 	}
 
+	screen_write_stop(&ctx);
 	return (&s);
 }
 
