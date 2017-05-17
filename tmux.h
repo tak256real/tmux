@@ -1332,6 +1332,8 @@ struct client {
 	struct event	 status_timer;
 	struct screen	 status;
 
+	struct screen	*old_status;
+
 #define CLIENT_TERMINAL 0x1
 #define CLIENT_LOGIN 0x2
 #define CLIENT_EXIT 0x4
