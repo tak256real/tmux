@@ -19,9 +19,14 @@
 // XXX XXX
 // TODO:
 // tree mode only commands (what?)
+//               K = kill tagged (needs to go on cmdq in case killing cur pane)
+//               s = swap cur with first tagged?
+//               j = join first tagged to cur?
+//               apply command to all tagged (need to use command prompt)
 // find-window
 // man page
 // do we want to use send -X or not?
+// choose-tree flags to start with sessions, windows, panes, expanded
 //
 
 #include <sys/types.h>
