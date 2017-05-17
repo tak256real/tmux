@@ -665,5 +665,5 @@ mode_tree_run_command(struct client *c, struct cmd_find_state *fs,
 		cmd_list_free(cmdlist);
 	}
 
-	free (command);
+	free(command);
 }
