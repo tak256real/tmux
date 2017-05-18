@@ -25,8 +25,7 @@
 // man page
 // do we want to use send -X or not?
 // choose-tree flags to start with sessions, windows, panes, expanded
-// splitw crash
-// crash when killw mode's window
+// crash when kill mode's window and it is last in session
 //
 
 #include <sys/types.h>
@@ -550,12 +549,12 @@ window_tree_key(struct window_pane *wp, struct client *c,
 	 * O = change sort order
 	 *
 	 * Enter = select item
-	 * Space = enter command
+	 * : = enter command
 	 */
 
 	finished = mode_tree_key(data->data, &key, m);
 	switch (key) {
-	case ' ':
+	case ':':
 		tagged = mode_tree_count_tagged(data->data);
 		if (tagged == 0)
 			break;
