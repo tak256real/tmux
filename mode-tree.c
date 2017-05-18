@@ -372,6 +372,9 @@ mode_tree_draw(struct mode_tree_data *mtd)
 	size_t			 size;
 	int			 keylen;
 
+	if (mtd->line_size == 0)
+		return;
+
 	memcpy(&gc0, &grid_default_cell, sizeof gc0);
 	memcpy(&gc, &grid_default_cell, sizeof gc);
 	style_apply(&gc, oo, "mode-style");

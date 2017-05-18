@@ -25,7 +25,6 @@
 // man page
 // do we want to use send -X or not?
 // choose-tree flags to start with sessions, windows, panes, expanded
-// crash when kill mode's window and it is last in session
 //
 
 #include <sys/types.h>
