@@ -510,7 +510,8 @@ window_tree_command_callback(struct client *c, void *modedata, const char *s,
 	data->client = c;
 	data->entered = s;
 
-	mode_tree_each_tagged(data->data, window_tree_command_each, KEYC_NONE);
+	mode_tree_each_tagged(data->data, window_tree_command_each, KEYC_NONE,
+	    1);
 
 	data->client = NULL;
 	data->entered = NULL;
@@ -555,10 +556,11 @@ window_tree_key(struct window_pane *wp, struct client *c,
 	switch (key) {
 	case ':':
 		tagged = mode_tree_count_tagged(data->data);
-		if (tagged == 0)
-			break;
+		if (tagged != 0)
+			xasprintf(&prompt, "(%u tagged) ", tagged);
+		else
+			xasprintf(&prompt, "(current) ");
 		data->references++;
-		xasprintf(&prompt, "(%u tagged) ", tagged);
 		status_prompt_set(c, prompt, "", window_tree_command_callback,
 		    window_tree_command_free, data, 0);
 		free(prompt);

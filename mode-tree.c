@@ -216,15 +216,23 @@ mode_tree_count_tagged(struct mode_tree_data *mtd)
 
 void
 mode_tree_each_tagged(struct mode_tree_data *mtd, void (*cb)(void *, void *,
-    key_code), key_code key)
+    key_code), key_code key, int current)
 {
 	struct mode_tree_item	*mti;
 	u_int			 i;
+	int			 fired;
 
+	fired = 0;
 	for (i = 0; i < mtd->line_size; i++) {
 		mti = mtd->line_list[i].item;
-		if (mti->tagged)
+		if (mti->tagged) {
+			fired = 1;
 			cb(mtd->modedata, mti->itemdata, key);
+		}
+	}
+	if (!fired && current) {
+		mti = mtd->line_list[mtd->current].item;
+		cb(mtd->modedata, mti->itemdata, key);
 	}
 }
 

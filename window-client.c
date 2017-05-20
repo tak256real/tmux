@@ -309,7 +309,8 @@ window_client_key(struct window_pane *wp, struct client *c,
 	case 'D':
 	case 'X':
 	case 'Z':
-		mode_tree_each_tagged(data->data, window_client_do_detach, key);
+		mode_tree_each_tagged(data->data, window_client_do_detach, key,
+		    0);
 		mode_tree_build(data->data);
 		break;
 	case '\r':

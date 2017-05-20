@@ -316,7 +316,8 @@ window_buffer_key(struct window_pane *wp, struct client *c,
 		mode_tree_build(data->data);
 		break;
 	case 'D':
-		mode_tree_each_tagged(data->data, window_buffer_do_delete, key);
+		mode_tree_each_tagged(data->data, window_buffer_do_delete, key,
+		    0);
 		mode_tree_build(data->data);
 		break;
 	case '\r':
