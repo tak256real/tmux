@@ -298,6 +298,12 @@ const struct options_table_entry options_table[] = {
 	  .default_num = 0
 	},
 
+	{ .name = "pane-border-ascii",
+	  .type = OPTIONS_TABLE_FLAG,
+	  .scope = OPTIONS_TABLE_SESSION,
+	  .default_num = 1
+	},
+
 	{ .name = "prefix",
 	  .type = OPTIONS_TABLE_KEY,
 	  .scope = OPTIONS_TABLE_SESSION,

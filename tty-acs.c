@@ -30,38 +30,38 @@ struct tty_acs_entry {
 	const char	*string;
 };
 static const struct tty_acs_entry tty_acs_table[] = {
-	{ '+', "\342\206\222" },	/* arrow pointing right */
-	{ ',', "\342\206\220" },	/* arrow pointing left */
-	{ '-', "\342\206\221" },	/* arrow pointing up */
-	{ '.', "\342\206\223" },	/* arrow pointing down */
-	{ '0', "\342\226\256" },	/* solid square block */
-	{ '`', "\342\227\206" },	/* diamond */
-	{ 'a', "\342\226\222" },	/* checker board (stipple) */
-	{ 'f', "\302\260" },		/* degree symbol */
-	{ 'g', "\302\261" },		/* plus/minus */
-	{ 'h', "\342\226\222" },	/* board of squares */
-	{ 'i', "\342\230\203" },	/* lantern symbol */
-	{ 'j', "\342\224\230" },	/* lower right corner */
-	{ 'k', "\342\224\220" },	/* upper right corner */
-	{ 'l', "\342\224\214" },	/* upper left corner */
-	{ 'm', "\342\224\224" },	/* lower left corner */
-	{ 'n', "\342\224\274" },	/* large plus or crossover */
-	{ 'o', "\342\216\272" },	/* scan line 1 */
-	{ 'p', "\342\216\273" },	/* scan line 3 */
-	{ 'q', "\342\224\200" },	/* horizontal line */
-	{ 'r', "\342\216\274" },	/* scan line 7 */
-	{ 's', "\342\216\275" },	/* scan line 9 */
-	{ 't', "\342\224\234" },	/* tee pointing right */
-	{ 'u', "\342\224\244" },	/* tee pointing left */
-	{ 'v', "\342\224\264" },	/* tee pointing up */
-	{ 'w', "\342\224\254" },	/* tee pointing down */
-	{ 'x', "\342\224\202" },	/* vertical line */
-	{ 'y', "\342\211\244" },	/* less-than-or-equal-to */
-	{ 'z', "\342\211\245" },	/* greater-than-or-equal-to */
-	{ '{', "\317\200" },   		/* greek pi */
-	{ '|', "\342\211\240" },	/* not-equal */
-	{ '}', "\302\243" },		/* UK pound sign */
-	{ '~', "\302\267" }		/* bullet */
+	{ '+', ">" },	/* arrow pointing right */
+	{ ',', "<" },	/* arrow pointing left */
+	{ '-', "^" },	/* arrow pointing up */
+	{ '.', "." },	/* arrow pointing down */
+	{ '0', "#" },	/* solid square block */
+	{ '`', "#" },	/* diamond */
+	{ 'a', "#" },	/* checker board (stipple) */
+	{ 'f', "#" },	/* degree symbol */
+	{ 'g', "#" },	/* plus/minus */
+	{ 'h', "#" },	/* board of squares */
+	{ 'i', "#" },	/* lantern symbol */
+	{ 'j', "+" },	/* lower right corner */
+	{ 'k', "+" },	/* upper right corner */
+	{ 'l', "+" },	/* upper left corner */
+	{ 'm', "+" },	/* lower left corner */
+	{ 'n', "+" },	/* large plus or crossover */
+	{ 'o', "_" },	/* scan line 1 */
+	{ 'p', "_" },	/* scan line 3 */
+	{ 'q', "-" },	/* horizontal line */
+	{ 'r', "_" },	/* scan line 7 */
+	{ 's', "_" },	/* scan line 9 */
+	{ 't', "+" },	/* tee pointing right */
+	{ 'u', "+" },	/* tee pointing left */
+	{ 'v', "+" },	/* tee pointing up */
+	{ 'w', "+" },	/* tee pointing down */
+	{ 'x', "|" },	/* vertical line */
+	{ 'y', "#" },	/* less-than-or-equal-to */
+	{ 'z', "#" },	/* greater-than-or-equal-to */
+	{ '{', "#" },	/* greek pi */
+	{ '|', "#" },	/* not-equal */
+	{ '}', "#" },	/* UK pound sign */
+	{ '~', "*" }	/* bullet */
 };
 
 static int
@@ -80,8 +80,8 @@ tty_acs_get(struct tty *tty, u_char ch)
 {
 	struct tty_acs_entry *entry;
 
-	/* If not a UTF-8 terminal, use the ACS set. */
-	if (tty != NULL && !(tty->flags & TTY_UTF8)) {
+	/* If pane-border-ascii */
+	if ( options_get_number(global_s_options, "pane-border-ascii") != 0 ) {
 		if (tty->term->acs[ch][0] == '\0')
 			return (NULL);
 		return (&tty->term->acs[ch][0]);
