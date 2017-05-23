@@ -194,13 +194,15 @@ main(int argc, char **argv)
 	int					 opt, flags, keys;
 	const struct options_table_entry	*oe;
 
-	if (setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) {
-		if (setlocale(LC_CTYPE, "") == NULL)
-			errx(1, "invalid LC_ALL, LC_CTYPE or LANG");
-		s = nl_langinfo(CODESET);
-		if (strcasecmp(s, "UTF-8") != 0 && strcasecmp(s, "UTF8") != 0)
-			errx(1, "need UTF-8 locale (LC_CTYPE) but have %s", s);
-	}
+	if (setlocale(LC_CTYPE, "") == NULL) {
+		errx(1, "invalid LC_ALL, LC_CTYPE or LANG");
+    }
+
+	s = nl_langinfo(CODESET);
+
+	if (strcasecmp(s, "UTF-8") != 0 && strcasecmp(s, "UTF8") != 0) {
+		errx(1, "need UTF-8 locale (LC_CTYPE) but have %s", s);
+    }
 
 	setlocale(LC_TIME, "");
 	tzset();
